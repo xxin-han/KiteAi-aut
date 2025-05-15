@@ -267,10 +267,10 @@ class KiteAi:
     def print_question(self):
         while True:
             try:
-                print("1. Run With Monosans Proxy")
-                print("2. Run With Private Proxy")
-                print("3. Run Without Proxy")
-                choose = int(input("Choose [1/2/3] -> ").strip())
+                print(f"{Fore.WHITE + Style.BRIGHT}1. Run With Monosans Proxy{Style.RESET_ALL}")
+                print(f"{Fore.WHITE + Style.BRIGHT}2. Run With Private Proxy{Style.RESET_ALL}")
+                print(f"{Fore.WHITE + Style.BRIGHT}3. Run Without Proxy{Style.RESET_ALL}")
+                choose = int(input(f"{Fore.BLUE + Style.BRIGHT}Choose [1/2/3] -> {Style.RESET_ALL}").strip())
 
                 if choose in [1, 2, 3]:
                     proxy_type = (
@@ -279,11 +279,34 @@ class KiteAi:
                         "Run Without Proxy"
                     )
                     print(f"{Fore.GREEN + Style.BRIGHT}{proxy_type} Selected.{Style.RESET_ALL}")
-                    return choose
+                    break
                 else:
                     print(f"{Fore.RED + Style.BRIGHT}Please enter either 1, 2 or 3.{Style.RESET_ALL}")
             except ValueError:
                 print(f"{Fore.RED + Style.BRIGHT}Invalid input. Enter a number (1, 2 or 3).{Style.RESET_ALL}")
+
+        rotate = False
+        if choose in [1, 2]:
+            while True:
+                rotate = input(f"{Fore.BLUE + Style.BRIGHT}Rotate Invalid Proxy? [y/n] -> {Style.RESET_ALL}").strip()
+
+                if rotate in ["y", "n"]:
+                    rotate = rotate == "y"
+                    break
+                else:
+                    print(f"{Fore.RED + Style.BRIGHT}Invalid input. Enter 'y' or 'n'.{Style.RESET_ALL}")
+
+        return choose, rotate
+    
+    async def check_connection(self, proxy=None):
+        connector = ProxyConnector.from_url(proxy) if proxy else None
+        try:
+            async with ClientSession(connector=connector, timeout=ClientTimeout(total=30)) as session:
+                async with session.get(url="https://agents.testnet.gokite.ai", headers={}) as response:
+                    response.raise_for_status()
+                    return True
+        except (Exception, ClientResponseError) as e:
+            return None
         
     async def user_stats(self, address: str, proxy=None, retries=5):
         url = f"{self.BASE_API}/user/{address}/stats"
@@ -294,7 +317,7 @@ class KiteAi:
         for attempt in range(retries):
             connector = ProxyConnector.from_url(proxy) if proxy else None
             try:
-                async with ClientSession(connector=connector, timeout=ClientTimeout(total=120)) as session:
+                async with ClientSession(connector=connector, timeout=ClientTimeout(total=60)) as session:
                     async with session.get(url=url, headers=headers) as response:
                         response.raise_for_status()
                         return await response.json()
@@ -316,7 +339,7 @@ class KiteAi:
         for attempt in range(retries):
             connector = ProxyConnector.from_url(proxy) if proxy else None
             try:
-                async with ClientSession(connector=connector, timeout=ClientTimeout(total=120)) as session:
+                async with ClientSession(connector=connector, timeout=ClientTimeout(total=60)) as session:
                     async with session.post(url=url, headers=headers, data=data) as response:
                         response.raise_for_status()
                         return await response.json()
@@ -326,26 +349,33 @@ class KiteAi:
                     continue
                 return None
             
-    async def perfrom_agent(self, agent_url: str, req_text: str, proxy=None, retries=5):
-        data = json.dumps({"message":req_text, "stream":True})
+    async def perfrom_agent(self, agent_url: str, req_text: str, proxy=None, retries=5, stream_timeout=10):
+        data = json.dumps({"message": req_text, "stream": True})
         headers = {
             **self.headers,
             "Accept": "text/event-stream",
             "Content-Length": str(len(data)),
             "Content-Type": "application/json"
         }
+
         for attempt in range(retries):
             connector = ProxyConnector.from_url(proxy) if proxy else None
             try:
-                async with ClientSession(connector=connector, timeout=ClientTimeout(total=120)) as session:
+                async with ClientSession(connector=connector, timeout=ClientTimeout(total=60)) as session:
                     start_time = time.time()
                     first_token_time = None
+                    last_token_time = time.time()
                     resp_text = ""
 
                     async with session.post(url=agent_url, headers=headers, data=data) as response:
                         response.raise_for_status()
 
                         async for line in response.content:
+                            now = time.time()
+
+                            if now - last_token_time > stream_timeout:
+                                return None
+
                             line = line.decode("utf-8").strip()
                             if line.startswith("data:"):
                                 try:
@@ -354,10 +384,11 @@ class KiteAi:
                                     content = delta.get("content")
 
                                     if content and first_token_time is None:
-                                        first_token_time = time.time()
+                                        first_token_time = now
 
                                     if content:
                                         resp_text += content
+                                        last_token_time = now
                                 except json.JSONDecodeError:
                                     continue
 
@@ -370,106 +401,167 @@ class KiteAi:
                         "ttft": ttft,
                         "total_time": total_time
                     }
+
             except (Exception, ClientResponseError) as e:
                 if attempt < retries - 1:
                     await asyncio.sleep(5)
                     continue
                 return None
             
-    async def process_accounts(self, address: str, use_proxy: bool):
-        proxy = self.get_next_proxy_for_account(address) if use_proxy else None
+    async def process_check_connection(self, address: str, use_proxy: bool, rotate_proxy: bool):
+        message = "Checking Connection, Wait..."
+        if use_proxy:
+            message = "Checking Proxy Connection, Wait..."
 
-        total_interactions = "N/A"
-        stats = await self.user_stats(address, proxy)
-        if stats:
-            total_interactions = stats["total_interactions"]
-
-        self.log(
-            f"{Fore.GREEN + Style.BRIGHT}Total Interactions With Agents Is{Style.RESET_ALL}"
-            f"{Fore.WHITE + Style.BRIGHT} {total_interactions} {Style.RESET_ALL}"
+        print(
+            f"{Fore.CYAN + Style.BRIGHT}[ {datetime.now().astimezone(wib).strftime('%x %X %Z')} ]{Style.RESET_ALL}"
+            f"{Fore.WHITE + Style.BRIGHT} | {Style.RESET_ALL}"
+            f"{Fore.YELLOW + Style.BRIGHT}{message}{Style.RESET_ALL}",
+            end="\r",
+            flush=True
         )
 
-        self.user_interactions[address] = 0
+        proxy = self.get_next_proxy_for_account(address) if use_proxy else None
 
-        max_agents_used = 20
+        if rotate_proxy:
+            is_valid = None
+            while is_valid is None:
+                is_valid = await self.check_connection(proxy)
+                if not is_valid:
+                    self.log(
+                        f"{Fore.CYAN+Style.BRIGHT}Proxy   :{Style.RESET_ALL}"
+                        f"{Fore.WHITE+Style.BRIGHT} {proxy} {Style.RESET_ALL}"
+                        f"{Fore.MAGENTA+Style.BRIGHT}-{Style.RESET_ALL}"
+                        f"{Fore.RED+Style.BRIGHT} Not 200 OK, {Style.RESET_ALL}"
+                        f"{Fore.YELLOW+Style.BRIGHT}Rotating Proxy...{Style.RESET_ALL}"
+                    )
+                    proxy = self.rotate_proxy_for_account(address) if use_proxy else None
+                    await asyncio.sleep(5)
+                    continue
 
-        for i in range(max_agents_used):
-            self.user_interactions[address] += 1
-            
+                self.log(
+                    f"{Fore.CYAN+Style.BRIGHT}Proxy   :{Style.RESET_ALL}"
+                    f"{Fore.WHITE+Style.BRIGHT} {proxy} {Style.RESET_ALL}"
+                    f"{Fore.MAGENTA+Style.BRIGHT}-{Style.RESET_ALL}"
+                    f"{Fore.GREEN+Style.BRIGHT} 200 OK {Style.RESET_ALL}                  "
+                )
+
+                return True
+
+        is_valid = await self.check_connection(proxy)
+        if not is_valid:
             self.log(
-                f"{Fore.MAGENTA + Style.BRIGHT}●{Style.RESET_ALL}"
-                f"{Fore.YELLOW + Style.BRIGHT} Interaction {Style.RESET_ALL}"
-                f"{Fore.WHITE + Style.BRIGHT}{self.user_interactions[address]} of {max_agents_used}{Style.RESET_ALL}"
+                f"{Fore.CYAN+Style.BRIGHT}Proxy   :{Style.RESET_ALL}"
+                f"{Fore.WHITE+Style.BRIGHT} {proxy} {Style.RESET_ALL}"
+                f"{Fore.MAGENTA+Style.BRIGHT}-{Style.RESET_ALL}"
+                f"{Fore.RED+Style.BRIGHT} Not 200 OK {Style.RESET_ALL}          "
+            )
+            return False
+        
+        self.log(
+            f"{Fore.CYAN+Style.BRIGHT}Proxy   :{Style.RESET_ALL}"
+            f"{Fore.WHITE+Style.BRIGHT} {proxy} {Style.RESET_ALL}"
+            f"{Fore.MAGENTA+Style.BRIGHT}-{Style.RESET_ALL}"
+            f"{Fore.GREEN+Style.BRIGHT} 200 OK {Style.RESET_ALL}                  "
+        )
+
+        return True
+        
+    async def process_accounts(self, address: str, use_proxy: bool, rotate_proxy: bool):
+        is_valid = await self.process_check_connection(address, use_proxy, rotate_proxy)
+        if is_valid:
+            proxy = self.get_next_proxy_for_account(address) if use_proxy else None
+
+            total_interactions = "N/A"
+            stats = await self.user_stats(address, proxy)
+            if stats:
+                total_interactions = stats["total_interactions"]
+
+            self.log(
+                f"{Fore.GREEN + Style.BRIGHT}Total Interactions With Agents Is{Style.RESET_ALL}"
+                f"{Fore.WHITE + Style.BRIGHT} {total_interactions} {Style.RESET_ALL}"
             )
 
-            agent_names = ["Professor", "Crypto Buddy", "Sherlock"]
+            self.user_interactions[address] = 0
 
-            agents = self.agent_lists(random.choice(agent_names))
-            if agents:
-                agent_url = agents["agent_url"]
-                agent_id = agents["agent_id"]
-                agent_name = agents["name"]
-                req_text = agents["question"]
+            while self.user_interactions[address] < 20:
 
+                self.user_interactions[address] += 1
+                    
                 self.log(
-                    f"{Fore.CYAN + Style.BRIGHT}    Agent Name: {Style.RESET_ALL}"
-                    f"{Fore.WHITE + Style.BRIGHT}{agent_name}{Style.RESET_ALL}"
-                )
-                self.log(
-                    f"{Fore.CYAN + Style.BRIGHT}    Agent Id  : {Style.RESET_ALL}"
-                    f"{Fore.WHITE + Style.BRIGHT}{agent_id}{Style.RESET_ALL}"
-                )
-                self.log(
-                    f"{Fore.CYAN + Style.BRIGHT}    Question  : {Style.RESET_ALL}"
-                    f"{Fore.WHITE + Style.BRIGHT}{req_text}{Style.RESET_ALL}"
+                    f"{Fore.MAGENTA + Style.BRIGHT}●{Style.RESET_ALL}"
+                    f"{Fore.YELLOW + Style.BRIGHT} Interaction {Style.RESET_ALL}"
+                    f"{Fore.WHITE + Style.BRIGHT}{self.user_interactions[address]} of 20{Style.RESET_ALL}"
                 )
 
-                perform_agent = await self.perfrom_agent(agent_url, req_text, proxy)
-                if perform_agent:
-                    resp_text = perform_agent["resp_text"]
-                    ttft = perform_agent["ttft"]
-                    total_time = perform_agent["total_time"]
+                agent_names = ["Professor", "Crypto Buddy", "Sherlock"]
+
+                agents = self.agent_lists(random.choice(agent_names))
+                if agents:
+                    agent_url = agents["agent_url"]
+                    agent_id = agents["agent_id"]
+                    agent_name = agents["name"]
+                    req_text = agents["question"]
 
                     self.log(
-                        f"{Fore.CYAN + Style.BRIGHT}    Answer    : {Style.RESET_ALL}"
-                        f"{Fore.WHITE + Style.BRIGHT}{resp_text.strip()}{Style.RESET_ALL}"
+                        f"{Fore.CYAN + Style.BRIGHT}    Agent Name: {Style.RESET_ALL}"
+                        f"{Fore.WHITE + Style.BRIGHT}{agent_name}{Style.RESET_ALL}"
+                    )
+                    self.log(
+                        f"{Fore.CYAN + Style.BRIGHT}    Agent Id  : {Style.RESET_ALL}"
+                        f"{Fore.WHITE + Style.BRIGHT}{agent_id}{Style.RESET_ALL}"
+                    )
+                    self.log(
+                        f"{Fore.CYAN + Style.BRIGHT}    Question  : {Style.RESET_ALL}"
+                        f"{Fore.WHITE + Style.BRIGHT}{req_text}{Style.RESET_ALL}"
                     )
 
-                    report = await self.report_usage(address, agent_id, req_text, resp_text, ttft, total_time, proxy)
-                    if report and report.get("message") == "Usage report successfully recorded":
-                        interaction_id = report["interaction_id"]
+                    perform_agent = await self.perfrom_agent(agent_url, req_text, proxy)
+                    if perform_agent:
+                        resp_text = perform_agent["resp_text"]
+                        ttft = perform_agent["ttft"]
+                        total_time = perform_agent["total_time"]
+
                         self.log(
-                            f"{Fore.CYAN + Style.BRIGHT}    Status    : {Style.RESET_ALL}"
-                            f"{Fore.GREEN + Style.BRIGHT}Usage Report Successfully Recorded{Style.RESET_ALL}"
+                            f"{Fore.CYAN + Style.BRIGHT}    Answer    : {Style.RESET_ALL}"
+                            f"{Fore.WHITE + Style.BRIGHT}{resp_text.strip()}{Style.RESET_ALL}"
                         )
-                        self.log(
-                            f"{Fore.MAGENTA + Style.BRIGHT}      >{Style.RESET_ALL}"
-                            f"{Fore.BLUE + Style.BRIGHT} Interaction Id: {Style.RESET_ALL}"
-                            f"{Fore.WHITE + Style.BRIGHT}{interaction_id}{Style.RESET_ALL}"
-                        )
+
+                        report = await self.report_usage(address, agent_id, req_text, resp_text, ttft, total_time, proxy)
+                        if report and report.get("message") == "Usage report successfully recorded":
+                            interaction_id = report["interaction_id"]
+                            self.log(
+                                f"{Fore.CYAN + Style.BRIGHT}    Status    : {Style.RESET_ALL}"
+                                f"{Fore.GREEN + Style.BRIGHT}Usage Report Successfully Recorded{Style.RESET_ALL}"
+                            )
+                            self.log(
+                                f"{Fore.MAGENTA + Style.BRIGHT}      >{Style.RESET_ALL}"
+                                f"{Fore.BLUE + Style.BRIGHT} Interaction Id: {Style.RESET_ALL}"
+                                f"{Fore.WHITE + Style.BRIGHT}{interaction_id}{Style.RESET_ALL}"
+                            )
+                        else:
+                            self.log(
+                                f"{Fore.CYAN + Style.BRIGHT}    Status    : {Style.RESET_ALL}"
+                                f"{Fore.RED + Style.BRIGHT}Usage Report Failed to Recorded{Style.RESET_ALL}"
+                            )
+                            self.user_interactions[address] -= 1
                     else:
                         self.log(
                             f"{Fore.CYAN + Style.BRIGHT}    Status    : {Style.RESET_ALL}"
-                            f"{Fore.RED + Style.BRIGHT}Usage Report Failed to Recorded{Style.RESET_ALL}"
+                            f"{Fore.RED + Style.BRIGHT}Interaction With Agent Failed{Style.RESET_ALL}"
                         )
                         self.user_interactions[address] -= 1
-                else:
-                    self.log(
-                        f"{Fore.CYAN + Style.BRIGHT}    Status    : {Style.RESET_ALL}"
-                        f"{Fore.RED + Style.BRIGHT}Interaction With Agent Failed{Style.RESET_ALL}"
-                    )
-                    self.user_interactions[address] -= 1
 
-                await asyncio.sleep(random.randint(5, 10))
+                    await asyncio.sleep(random.randint(5, 10))
 
-        self.user_interactions[address] = 0
+            self.user_interactions[address] = 0
 
     async def main(self):
         try:
             with open('accounts.txt', 'r') as file:
                 accounts = [line.strip() for line in file if line.strip()]
             
-            use_proxy_choice = self.print_question()
+            use_proxy_choice, rotate_proxy = self.print_question()
 
             while True:
                 use_proxy = False
@@ -494,7 +586,7 @@ class KiteAi:
                             f"{Fore.WHITE + Style.BRIGHT} {self.mask_account(address)} {Style.RESET_ALL}"
                             f"{Fore.CYAN + Style.BRIGHT}]{separator}{Style.RESET_ALL}"
                         )
-                        await self.process_accounts(address, use_proxy)
+                        await self.process_accounts(address, use_proxy, rotate_proxy)
                         await asyncio.sleep(3)
 
                 self.log(f"{Fore.CYAN + Style.BRIGHT}={Style.RESET_ALL}"*72)

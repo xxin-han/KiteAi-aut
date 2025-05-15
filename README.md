@@ -9,10 +9,11 @@ Kite Ai BOT
 ## Features
 
   - Auto Get Account Information
-  - Auto Run With [Monosans](https://raw.githubusercontent.com/monosans/proxy-list/main/proxies/all.txt) Proxy - Choose 1
-  - Auto Run With Private Proxy - Choose 2
-  - Auto Run Without Proxy - Choose 3
-  - Auto Perform Daily Interactions With Kite Ai Agents (no onchain)
+  - Auto Run With [Monosans](https://raw.githubusercontent.com/monosans/proxy-list/main/proxies/all.txt) Proxy - `Choose 1`
+  - Auto Run With Private Proxy - `Choose 2`
+  - Auto Run Without Proxy - `Choose 3`
+  - Auto Rotate Invalid Proxies - `y` or `n`
+  - Auto Perform Daily Interactions With Kite Ai Agents (without onchain)
   - Multi Accounts
 
 ### Note: Agent actions and XP may be delayed in appearing, please be patient.
