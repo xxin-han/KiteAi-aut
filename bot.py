@@ -314,6 +314,7 @@ class KiteAi:
             **self.headers,
             "Accept": "*/*",
         }
+        await asyncio.sleep(3)
         for attempt in range(retries):
             connector = ProxyConnector.from_url(proxy) if proxy else None
             try:
@@ -336,6 +337,7 @@ class KiteAi:
             "Content-Length": str(len(data)),
             "Content-Type": "application/json"
         }
+        await asyncio.sleep(3)
         for attempt in range(retries):
             connector = ProxyConnector.from_url(proxy) if proxy else None
             try:
@@ -357,7 +359,7 @@ class KiteAi:
             "Content-Length": str(len(data)),
             "Content-Type": "application/json"
         }
-
+        await asyncio.sleep(3)
         for attempt in range(retries):
             connector = ProxyConnector.from_url(proxy) if proxy else None
             try:
@@ -429,7 +431,7 @@ class KiteAi:
                 is_valid = await self.check_connection(proxy)
                 if not is_valid:
                     self.log(
-                        f"{Fore.CYAN+Style.BRIGHT}Proxy   :{Style.RESET_ALL}"
+                        f"{Fore.CYAN+Style.BRIGHT}Proxy :{Style.RESET_ALL}"
                         f"{Fore.WHITE+Style.BRIGHT} {proxy} {Style.RESET_ALL}"
                         f"{Fore.MAGENTA+Style.BRIGHT}-{Style.RESET_ALL}"
                         f"{Fore.RED+Style.BRIGHT} Not 200 OK, {Style.RESET_ALL}"
@@ -440,7 +442,7 @@ class KiteAi:
                     continue
 
                 self.log(
-                    f"{Fore.CYAN+Style.BRIGHT}Proxy   :{Style.RESET_ALL}"
+                    f"{Fore.CYAN+Style.BRIGHT}Proxy :{Style.RESET_ALL}"
                     f"{Fore.WHITE+Style.BRIGHT} {proxy} {Style.RESET_ALL}"
                     f"{Fore.MAGENTA+Style.BRIGHT}-{Style.RESET_ALL}"
                     f"{Fore.GREEN+Style.BRIGHT} 200 OK {Style.RESET_ALL}                  "
@@ -451,7 +453,7 @@ class KiteAi:
         is_valid = await self.check_connection(proxy)
         if not is_valid:
             self.log(
-                f"{Fore.CYAN+Style.BRIGHT}Proxy   :{Style.RESET_ALL}"
+                f"{Fore.CYAN+Style.BRIGHT}Proxy :{Style.RESET_ALL}"
                 f"{Fore.WHITE+Style.BRIGHT} {proxy} {Style.RESET_ALL}"
                 f"{Fore.MAGENTA+Style.BRIGHT}-{Style.RESET_ALL}"
                 f"{Fore.RED+Style.BRIGHT} Not 200 OK {Style.RESET_ALL}          "
@@ -459,7 +461,7 @@ class KiteAi:
             return False
         
         self.log(
-            f"{Fore.CYAN+Style.BRIGHT}Proxy   :{Style.RESET_ALL}"
+            f"{Fore.CYAN+Style.BRIGHT}Proxy :{Style.RESET_ALL}"
             f"{Fore.WHITE+Style.BRIGHT} {proxy} {Style.RESET_ALL}"
             f"{Fore.MAGENTA+Style.BRIGHT}-{Style.RESET_ALL}"
             f"{Fore.GREEN+Style.BRIGHT} 200 OK {Style.RESET_ALL}                  "
@@ -478,20 +480,19 @@ class KiteAi:
                 total_interactions = stats["total_interactions"]
 
             self.log(
-                f"{Fore.GREEN + Style.BRIGHT}Total Interactions With Agents Is{Style.RESET_ALL}"
-                f"{Fore.WHITE + Style.BRIGHT} {total_interactions} {Style.RESET_ALL}"
+                f"{Fore.CYAN+Style.BRIGHT}Agents:{Style.RESET_ALL}"
+                f"{Fore.GREEN + Style.BRIGHT} Total Interactions With Agents Is {Style.RESET_ALL}"
+                f"{Fore.WHITE + Style.BRIGHT}{total_interactions}{Style.RESET_ALL}"
             )
 
             self.user_interactions[address] = 0
 
             while self.user_interactions[address] < 20:
-
-                self.user_interactions[address] += 1
                     
                 self.log(
-                    f"{Fore.MAGENTA + Style.BRIGHT}●{Style.RESET_ALL}"
-                    f"{Fore.YELLOW + Style.BRIGHT} Interaction {Style.RESET_ALL}"
-                    f"{Fore.WHITE + Style.BRIGHT}{self.user_interactions[address]} of 20{Style.RESET_ALL}"
+                    f"{Fore.MAGENTA + Style.BRIGHT}  ● {Style.RESET_ALL}"
+                    f"{Fore.BLUE + Style.BRIGHT}Interactions{Style.RESET_ALL}"
+                    f"{Fore.WHITE + Style.BRIGHT} {self.user_interactions[address] + 1} of 20 {Style.RESET_ALL}"
                 )
 
                 agent_names = ["Professor", "Crypto Buddy", "Sherlock"]
@@ -530,27 +531,23 @@ class KiteAi:
                         report = await self.report_usage(address, agent_id, req_text, resp_text, ttft, total_time, proxy)
                         if report and report.get("message") == "Usage report successfully recorded":
                             interaction_id = report["interaction_id"]
+                            self.user_interactions[address] += 1
                             self.log(
                                 f"{Fore.CYAN + Style.BRIGHT}    Status    : {Style.RESET_ALL}"
                                 f"{Fore.GREEN + Style.BRIGHT}Usage Report Successfully Recorded{Style.RESET_ALL}"
-                            )
-                            self.log(
-                                f"{Fore.MAGENTA + Style.BRIGHT}      >{Style.RESET_ALL}"
-                                f"{Fore.BLUE + Style.BRIGHT} Interaction Id: {Style.RESET_ALL}"
-                                f"{Fore.WHITE + Style.BRIGHT}{interaction_id}{Style.RESET_ALL}"
+                                f"{Fore.MAGENTA + Style.BRIGHT} - {Style.RESET_ALL}"
+                                f"{Fore.BLUE + Style.BRIGHT}{interaction_id}{Style.RESET_ALL}"
                             )
                         else:
                             self.log(
                                 f"{Fore.CYAN + Style.BRIGHT}    Status    : {Style.RESET_ALL}"
                                 f"{Fore.RED + Style.BRIGHT}Usage Report Failed to Recorded{Style.RESET_ALL}"
                             )
-                            self.user_interactions[address] -= 1
                     else:
                         self.log(
                             f"{Fore.CYAN + Style.BRIGHT}    Status    : {Style.RESET_ALL}"
                             f"{Fore.RED + Style.BRIGHT}Interaction With Agent Failed{Style.RESET_ALL}"
                         )
-                        self.user_interactions[address] -= 1
 
                     await asyncio.sleep(random.randint(5, 10))
 
