@@ -1,7 +1,7 @@
-# Kite Ai BOT
-Kite Ai BOT
+# Kite AI Ozone BOT
+Kite AI Ozone BOT
 
-- Register Here : [Kite Ai](https://testnet.gokite.ai?r=JPwgF4jf)
+- Register Here : [Kite AI Ozone](https://testnet.gokite.ai?referralCode=8SOHH7LG)
 - Sign With New EVM Wallet
 - Connect Social Media
 - Complete Available Tasks
@@ -13,10 +13,9 @@ Kite Ai BOT
   - Auto Run With Private Proxy - `Choose 2`
   - Auto Run Without Proxy - `Choose 3`
   - Auto Rotate Invalid Proxies - `y` or `n`
-  - Auto Perform Daily Interactions With Kite Ai Agents (without onchain)
+  - Auto Complete Daily Quiz - `Available Soon`
+  - Auto Interaction With Kite AI Agents
   - Multi Accounts
-
-### Note: Agent actions and XP may be delayed in appearing, please be patient.
 
 ## Requiremnets
 
@@ -37,12 +36,26 @@ Kite Ai BOT
    pip install -r requirements.txt #or pip3 install -r requirements.txt
    ```
 
+### Note: If u got an error, check your cryptography and eth-account libraries version first. If not same with version in requirements.txt, u must uninstall that library.
+- **Check Library Version**
+  ```bash
+    pip show libary_name
+  ```
+- **Uninstall Library**
+  ```bash
+    pip uninstall libary_name
+  ```
+- **Install Library With Version**
+  ```bash
+    pip install libary_name==version
+  ```
+
 ## Configuration
 
 - **accounts.txt:** You will find the file `accounts.txt` inside the project directory. Make sure `accounts.txt` contains data that matches the format expected by the script. Here are examples of file formats:
   ```bash
-    your_evm_address_1
-    your_evm_address_2
+    your_private_key_1
+    your_private_key_2
   ```
 
 - **proxy.txt:** You will find the file `proxy.txt` inside the project directory. Make sure `proxy.txt` contains data that matches the format expected by the script. Here are examples of file formats:
