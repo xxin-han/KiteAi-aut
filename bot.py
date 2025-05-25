@@ -735,7 +735,7 @@ class KiteAi:
                                 if quiz_question:
                                     question_id = quiz_question.get("question_id")
                                     quiz_content = quiz_question.get("content")
-                                    quiz_answer = quiz_question.get("content")
+                                    quiz_answer = quiz_question.get("answer")
 
                                     self.log(
                                         f"{Fore.MAGENTA + Style.BRIGHT}  ● {Style.RESET_ALL}"
