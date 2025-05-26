@@ -3,18 +3,11 @@ from cryptography.hazmat.backends import default_backend
 from aiohttp import ClientResponseError, ClientSession, ClientTimeout
 from aiohttp_socks import ProxyConnector
 from fake_useragent import FakeUserAgent
-from eth_account import Account
 from colorama import *
 from datetime import datetime
 import asyncio, binascii, random, json, os, pytz
 
 wib = pytz.timezone('Asia/Jakarta')
-
-subnet_address = [
-    "0xc368ae279275f80125284d16d292b650ecbbff8d", # BitMind
-    "0xca312b44a57cc9fd60f37e6c9a343a1ad92a3b6c", # Bitte
-    "0xb132001567650917d6bd695d1fab55db7986e9a5"  # Kite Ai Agents
-]
 
 class KiteAi:
     def __init__(self) -> None:
@@ -31,6 +24,9 @@ class KiteAi:
         self.NEO_API = "https://neo.prod.gokite.ai/v2"
         self.OZONE_API = "https://ozone-point-system.prod.gokite.ai"
         self.KEY_HEX = "6a1c35292b7c5b769ff47d89a17e7bc4f0adfe1b462981d28e0e9f7ff20b8f8a"
+        self.BITMIND_SUBNET = "0xc368ae279275f80125284d16d292b650ecbbff8d"
+        self.BITTE_SUBNET = "0xca312b44a57cc9fd60f37e6c9a343a1ad92a3b6c"
+        self.KITE_AI_SUBNET = "0xb132001567650917d6bd695d1fab55db7986e9a5"
         self.proxies = []
         self.proxy_index = 0
         self.account_proxies = {}
@@ -117,15 +113,6 @@ class KiteAi:
         self.account_proxies[token] = proxy
         self.proxy_index = (self.proxy_index + 1) % len(self.proxies)
         return proxy
-    
-    def generate_address(self, private_key: str):
-        try:
-            account = Account.from_key(private_key)
-            address = account.address
-            
-            return address
-        except Exception as e:
-            return None
 
     def generate_auth_token(self, address):
         try:
@@ -141,7 +128,7 @@ class KiteAi:
 
             return result_hex
         except Exception as e:
-            return None
+            raise Exception(f"Generate Auth Token Failed: {str(e)}")
     
     def generate_quiz_title(self):
         today = datetime.today().strftime('%Y-%m-%d')
@@ -338,6 +325,16 @@ class KiteAi:
     def print_question(self):
         while True:
             try:
+                count = int(input(f"{Fore.YELLOW + Style.BRIGHT}How Many Times Would You Like to Interact With Kite AI Agents? -> {Style.RESET_ALL}").strip())
+                if count > 0:
+                    break
+                else:
+                    print(f"{Fore.RED + Style.BRIGHT}Please enter a positive number.{Style.RESET_ALL}")
+            except ValueError:
+                print(f"{Fore.RED + Style.BRIGHT}Invalid input. Enter a number.{Style.RESET_ALL}")
+
+        while True:
+            try:
                 print(f"{Fore.WHITE + Style.BRIGHT}1. Run With Monosans Proxy{Style.RESET_ALL}")
                 print(f"{Fore.WHITE + Style.BRIGHT}2. Run With Private Proxy{Style.RESET_ALL}")
                 print(f"{Fore.WHITE + Style.BRIGHT}3. Run Without Proxy{Style.RESET_ALL}")
@@ -366,16 +363,6 @@ class KiteAi:
                     break
                 else:
                     print(f"{Fore.RED + Style.BRIGHT}Invalid input. Enter 'y' or 'n'.{Style.RESET_ALL}")
-
-        while True:
-            try:
-                count = int(input(f"{Fore.YELLOW + Style.BRIGHT}How Many Times Would You Like to Interact With Kite AI Agents? -> {Style.RESET_ALL}").strip())
-                if count > 0:
-                    break
-                else:
-                    print(f"{Fore.RED + Style.BRIGHT}Please enter a positive number.{Style.RESET_ALL}")
-            except ValueError:
-                print(f"{Fore.RED + Style.BRIGHT}Invalid input. Enter a number.{Style.RESET_ALL}")
 
         return count, choose, rotate
         
@@ -510,7 +497,6 @@ class KiteAi:
             try:
                 async with ClientSession(connector=connector, timeout=ClientTimeout(total=60)) as session:
                     async with session.get(url=url, headers=headers) as response:
-                        self.log(await response.text())
                         response.raise_for_status()
                         return await response.json()
             except (Exception, ClientResponseError) as e:
@@ -519,9 +505,9 @@ class KiteAi:
                     continue
                 return None
             
-    async def delegate_token(self, address: str, subnet_address: str, amount: int, proxy=None, retries=5):
+    async def stake_token(self, address: str, amount: float, proxy=None, retries=5):
         url = f"{self.OZONE_API}/subnet/delegate"
-        data = json.dumps({"subnet_address":subnet_address, "amount":amount})
+        data = json.dumps({"subnet_address":self.KITE_AI_SUBNET, "amount":amount})
         headers = {
             **self.headers,
             "Authorization": f"Bearer {self.access_tokens[address]}",
@@ -534,7 +520,6 @@ class KiteAi:
             try:
                 async with ClientSession(connector=connector, timeout=ClientTimeout(total=60)) as session:
                     async with session.post(url=url, headers=headers, data=data) as response:
-                        self.log(await response.text())
                         response.raise_for_status()
                         return await response.json()
             except (Exception, ClientResponseError) as e:
@@ -543,9 +528,9 @@ class KiteAi:
                     continue
                 return None
             
-    async def claim_delegate(self, address: str, subnet_address: str, proxy=None, retries=5):
+    async def claim_stake_rewards(self, address: str, proxy=None, retries=5):
         url = f"{self.OZONE_API}/subnet/claim-rewards"
-        data = json.dumps({"subnet_address":subnet_address})
+        data = json.dumps({"subnet_address":self.KITE_AI_SUBNET})
         headers = {
             **self.headers,
             "Authorization": f"Bearer {self.access_tokens[address]}",
@@ -558,7 +543,6 @@ class KiteAi:
             try:
                 async with ClientSession(connector=connector, timeout=ClientTimeout(total=60)) as session:
                     async with session.post(url=url, headers=headers, data=data) as response:
-                        self.log(await response.text())
                         response.raise_for_status()
                         return await response.json()
             except (Exception, ClientResponseError) as e:
@@ -701,7 +685,7 @@ class KiteAi:
                 return
             
             username = user.get("data", {}).get("profile", {}).get("username", "Unknown")
-            sa_address = user.get("data", {}).get("profile", {}).get("smart_account_address", "Undifined").upper()
+            sa_address = user.get("data", {}).get("profile", {}).get("smart_account_address", "Undifined")
             balance = user.get("data", {}).get("profile", {}).get("total_xp_points", 0)
             
             self.log(
@@ -713,9 +697,28 @@ class KiteAi:
                 f"{Fore.CYAN+Style.BRIGHT}SA Address:{Style.RESET_ALL}"
                 f"{Fore.WHITE+Style.BRIGHT} {sa_address} {Style.RESET_ALL}"
             )
+            self.log(f"{Fore.CYAN+Style.BRIGHT}Balance   :{Style.RESET_ALL}")
+
             self.log(
-                f"{Fore.CYAN+Style.BRIGHT}Balance   :{Style.RESET_ALL}"
+                f"{Fore.MAGENTA+Style.BRIGHT}  ● {Style.RESET_ALL}"
                 f"{Fore.WHITE+Style.BRIGHT} {balance} XP {Style.RESET_ALL}"
+            )
+
+            kite_balance = "N/A"
+            usdt_balance = "N/A"
+
+            balance = await self.token_balance(address, proxy)
+            if balance:
+                kite_balance = balance.get("data", ).get("balances", {}).get("kite", 0)
+                usdt_balance = balance.get("data", ).get("balances", {}).get("usdt", 0)
+
+            self.log(
+                f"{Fore.MAGENTA+Style.BRIGHT}  ● {Style.RESET_ALL}"
+                f"{Fore.WHITE+Style.BRIGHT} {kite_balance} KITE {Style.RESET_ALL}"
+            )
+            self.log(
+                f"{Fore.MAGENTA+Style.BRIGHT}  ● {Style.RESET_ALL}"
+                f"{Fore.WHITE+Style.BRIGHT} {usdt_balance} USDT {Style.RESET_ALL}"
             )
 
             create = await self.create_quiz(address, proxy)
@@ -794,6 +797,42 @@ class KiteAi:
                     f"{Fore.RED+Style.BRIGHT} GET Data Failed {Style.RESET_ALL}"
                 )
 
+            if kite_balance != "N/A" and kite_balance >= 1:
+                stake = await self.stake_token(address, kite_balance, proxy)
+                if stake:
+                    self.log(
+                        f"{Fore.CYAN+Style.BRIGHT}Stake     :{Style.RESET_ALL}"
+                        f"{Fore.GREEN+Style.BRIGHT} Success {Style.RESET_ALL}"
+                        f"{Fore.MAGENTA+Style.BRIGHT}-{Style.RESET_ALL}"
+                        f"{Fore.CYAN+Style.BRIGHT} Amount: {Style.RESET_ALL}"
+                        f"{Fore.WHITE+Style.BRIGHT}{kite_balance} KITE{Style.RESET_ALL}"
+                    )
+                else:
+                    self.log(
+                        f"{Fore.CYAN+Style.BRIGHT}Stake     :{Style.RESET_ALL}"
+                        f"{Fore.RED+Style.BRIGHT} Failed {Style.RESET_ALL}"
+                    )
+            else:
+                self.log(
+                    f"{Fore.CYAN+Style.BRIGHT}Stake     :{Style.RESET_ALL}"
+                    f"{Fore.YELLOW+Style.BRIGHT} Insufficinet Kite Token Balance {Style.RESET_ALL}"
+                )
+
+            unstake = await self.claim_stake_rewards(address, proxy)
+            if unstake:
+                reward = unstake.get("data", {}).get("claim_amount", 0)
+                self.log(
+                    f"{Fore.CYAN+Style.BRIGHT}Unstake   :{Style.RESET_ALL}"
+                    f"{Fore.GREEN+Style.BRIGHT} Success {Style.RESET_ALL}"
+                    f"{Fore.MAGENTA+Style.BRIGHT}-{Style.RESET_ALL}"
+                    f"{Fore.CYAN+Style.BRIGHT} Reward: {Style.RESET_ALL}"
+                    f"{Fore.WHITE+Style.BRIGHT}{reward} KITE{Style.RESET_ALL}"
+                )
+            else:
+                self.log(
+                    f"{Fore.CYAN+Style.BRIGHT}Unstake   :{Style.RESET_ALL}"
+                    f"{Fore.RED+Style.BRIGHT} Failed {Style.RESET_ALL}"
+                )
 
             self.log(f"{Fore.CYAN+Style.BRIGHT}AI Agents :{Style.RESET_ALL}")
 
@@ -856,7 +895,7 @@ class KiteAi:
             with open('accounts.txt', 'r') as file:
                 accounts = [line.strip() for line in file if line.strip()]
             
-            interact_count, use_proxy_choice, rotate_proxy = self.print_question()
+            count, use_proxy_choice, rotate_proxy = self.print_question()
 
             while True:
                 use_proxy = False
@@ -874,25 +913,21 @@ class KiteAi:
                     await self.load_proxies(use_proxy_choice)
                 
                 separator = "=" * 25
-                for account in accounts:
-                    if account:
-                        address = self.generate_address(account)
-                        if not address:
-                            self.log(f"{Fore.RED+Style.BRIGHT}Generate address failed, check your pk or eth-account library version first.{Style.RESET_ALL}")
-                            continue
-                        
-                        auth_token = self.generate_auth_token(address)
-                        if not auth_token:
-                            self.log(f"{Fore.RED+Style.BRIGHT}Generate auth token failed, check your cryptography library version first.{Style.RESET_ALL}")
-                            continue
-                        
-                        self.auth_tokens[address] = auth_token
+                for address in accounts:
+                    if address:
                         self.log(
                             f"{Fore.CYAN + Style.BRIGHT}{separator}[{Style.RESET_ALL}"
                             f"{Fore.WHITE + Style.BRIGHT} {self.mask_account(address)} {Style.RESET_ALL}"
                             f"{Fore.CYAN + Style.BRIGHT}]{separator}{Style.RESET_ALL}"
                         )
-                        await self.process_accounts(address, interact_count, use_proxy, rotate_proxy)
+                        
+                        auth_token = self.generate_auth_token(address)
+                        if not auth_token:
+                            continue
+                        
+                        self.auth_tokens[address] = auth_token
+                        
+                        await self.process_accounts(address, count, use_proxy, rotate_proxy)
                         await asyncio.sleep(3)
 
                 self.log(f"{Fore.CYAN + Style.BRIGHT}={Style.RESET_ALL}"*72)
