@@ -702,14 +702,16 @@ class KiteAi:
                 )
 
             if kite_balance != "N/A" and kite_balance >= 1:
-                stake = await self.stake_token(address, kite_balance, proxy)
+                amount = float(f"{kite_balance:.1f}")
+
+                stake = await self.stake_token(address, amount, proxy)
                 if stake:
                     self.log(
                         f"{Fore.CYAN+Style.BRIGHT}Stake     :{Style.RESET_ALL}"
                         f"{Fore.GREEN+Style.BRIGHT} Success {Style.RESET_ALL}"
                         f"{Fore.MAGENTA+Style.BRIGHT}-{Style.RESET_ALL}"
                         f"{Fore.CYAN+Style.BRIGHT} Amount: {Style.RESET_ALL}"
-                        f"{Fore.WHITE+Style.BRIGHT}{kite_balance} KITE{Style.RESET_ALL}"
+                        f"{Fore.WHITE+Style.BRIGHT}{amount} KITE{Style.RESET_ALL}"
                     )
                 else:
                     self.log(
