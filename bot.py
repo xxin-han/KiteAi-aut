@@ -746,12 +746,12 @@ class KiteAi:
                 else:
                     self.log(
                         f"{Fore.CYAN+Style.BRIGHT}Faucet    :{Style.RESET_ALL}"
-                        f"{Fore.YELLOW+Style.BRIGHT}Not Time to Claim{Style.RESET_ALL}"
+                        f"{Fore.YELLOW+Style.BRIGHT} Not Time to Claim {Style.RESET_ALL}"
                     )
             else:
                 self.log(
                     f"{Fore.CYAN+Style.BRIGHT}Faucet    :{Style.RESET_ALL}"
-                    f"{Fore.YELLOW+Style.BRIGHT}Skipping Claim{Style.RESET_ALL}"
+                    f"{Fore.YELLOW+Style.BRIGHT} Skipping Claim {Style.RESET_ALL}"
                 )
 
             create = await self.create_quiz(address, proxy)
