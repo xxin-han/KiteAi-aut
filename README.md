@@ -13,6 +13,7 @@ Kite AI Ozone BOT
   - Auto Run With Private Proxy - `Choose 2`
   - Auto Run Without Proxy - `Choose 3`
   - Auto Rotate Invalid Proxies - `y` or `n`
+  - Auto Claim Kite Token Faucet
   - Auto Complete Daily Quiz
   - Auto Stake & Unstake KITE Token
   - Auto Interaction With Kite AI Agents
