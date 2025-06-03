@@ -667,7 +667,6 @@ class KiteAi:
         return True
         
     async def process_accounts(self, address: str, agents: list, faucet: bool, interact_count: int, use_proxy: bool, rotate_proxy: bool):
-        await self.solve_recaptcha()
         signed = await self.process_user_signin(address, use_proxy, rotate_proxy)
         if signed:
             proxy = self.get_next_proxy_for_account(address) if use_proxy else None
