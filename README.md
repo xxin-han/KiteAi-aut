@@ -13,7 +13,7 @@ Kite AI Ozone BOT
   - Auto Run With Private Proxy - `Choose 2`
   - Auto Run Without Proxy - `Choose 3`
   - Auto Rotate Invalid Proxies - `y` or `n`
-  - Auto Claim Kite Token Faucet
+  - Auto Claim Kite Token Faucet - `Need 2captcha key`
   - Auto Complete Daily Quiz
   - Auto Stake & Unstake KITE Token
   - Auto Interaction With Kite AI Agents
@@ -58,6 +58,11 @@ Kite AI Ozone BOT
   ```bash
     your_evm(EOA)_address_1
     your_evm(EOA)_address_2
+  ```
+
+- **2capctha_key.txt:** You will find the file `2capctha_key.txt` inside the project directory. Make sure `2capctha_key.txt` contains data that matches the format expected by the script. Here are examples of file formats:
+  ```bash
+    your_2captcha_key
   ```
 
 - **proxy.txt:** You will find the file `proxy.txt` inside the project directory. Make sure `proxy.txt` contains data that matches the format expected by the script. Here are examples of file formats:
