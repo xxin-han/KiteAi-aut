@@ -37,6 +37,8 @@ class KiteAi:
         self.access_tokens = {}
         self.header_cookies = {}
         self.agent_lists = []
+        self.min_delay = 0
+        self.max_delay = 0
 
     def clear_terminal(self):
         os.system('cls' if os.name == 'nt' else 'clear')
@@ -235,8 +237,8 @@ class KiteAi:
         except Exception as e:
             return None
     
-    async def print_timer(self, min_delay: int, max_delay: int):
-        for remaining in range(random.randint(min_delay, max_delay), 0, -1):
+    async def print_timer(self):
+        for remaining in range(random.randint(self.min_delay, self.max_delay), 0, -1):
             print(
                 f"{Fore.CYAN + Style.BRIGHT}[ {datetime.now().astimezone(wib).strftime('%x %X %Z')} ]{Style.RESET_ALL}"
                 f"{Fore.WHITE + Style.BRIGHT} | {Style.RESET_ALL}"
@@ -287,6 +289,28 @@ class KiteAi:
                     break
                 else:
                     print(f"{Fore.RED + Style.BRIGHT}Invalid input. Enter 'y' or 'n'.{Style.RESET_ALL}")
+
+        while True:
+                try:
+                    min_delay = int(input(f"{Fore.YELLOW + Style.BRIGHT}Min Delay Each Interactions -> {Style.RESET_ALL}").strip())
+                    if min_delay >= 0:
+                        self.min_delay = min_delay
+                        break
+                    else:
+                        print(f"{Fore.RED + Style.BRIGHT}Min Delay must be >= 0.{Style.RESET_ALL}")
+                except ValueError:
+                    print(f"{Fore.RED + Style.BRIGHT}Invalid input. Enter a number.{Style.RESET_ALL}")
+
+        while True:
+            try:
+                max_delay = int(input(f"{Fore.YELLOW + Style.BRIGHT}Max Delay Each Interactions -> {Style.RESET_ALL}").strip())
+                if max_delay >= min_delay:
+                    self.max_delay = max_delay
+                    break
+                else:
+                    print(f"{Fore.RED + Style.BRIGHT}Min Delay must be >= Min Delay.{Style.RESET_ALL}")
+            except ValueError:
+                print(f"{Fore.RED + Style.BRIGHT}Invalid input. Enter a number.{Style.RESET_ALL}")
 
         return faucet, choose, rotate
     
@@ -615,7 +639,7 @@ class KiteAi:
 
         return None
             
-    async def agent_inference(self, address: str, service_id: str, question: str, proxy=None, retries=5):
+    async def agent_inference(self, address: str, service_id: str, question: str, use_proxy: bool, rotate_proxy: bool, proxy=None, retries=5):
         url = f"{self.OZONE_API}/agent/inference"
         data = json.dumps(self.generate_inference_payload(service_id, question))
         headers = {
@@ -630,6 +654,11 @@ class KiteAi:
             try:
                 async with ClientSession(connector=connector, timeout=ClientTimeout(total=60)) as session:
                     async with session.post(url=url, headers=headers, data=data) as response:
+                        if response.status == 401:
+                            await self.process_user_signin(address, use_proxy, rotate_proxy)
+                            headers["Authorization"] = f"Bearer {self.access_tokens[address]}"
+                            continue
+
                         response.raise_for_status()
                         result = ""
 
@@ -872,7 +901,7 @@ class KiteAi:
                 kite_balance = balance.get("data", ).get("balances", {}).get("kite", 0)
 
                 if kite_balance >= 1:
-                    amount = float(f"{kite_balance:.1f}")
+                    amount = 1
 
                     stake = await self.stake_token(address, amount, proxy)
                     if stake:
@@ -938,7 +967,7 @@ class KiteAi:
                     f"{Fore.WHITE + Style.BRIGHT}{question}{Style.RESET_ALL}"
                 )
 
-                answer = await self.agent_inference(address, service_id, question, proxy)
+                answer = await self.agent_inference(address, service_id, question, use_proxy, rotate_proxy, proxy)
                 if answer:
                     self.log(
                         f"{Fore.BLUE + Style.BRIGHT}    Answer  : {Style.RESET_ALL}"
@@ -955,7 +984,7 @@ class KiteAi:
                             f"{Fore.GREEN + Style.BRIGHT}Receipt Submited Successfully{Style.RESET_ALL}"
                         )
 
-                await self.print_timer(5, 10)
+                await self.print_timer()
 
     async def main(self):
         try:
