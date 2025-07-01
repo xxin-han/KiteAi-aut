@@ -976,13 +976,13 @@ class KiteAi:
 
                     submit = await self.submit_receipt(address, sa_address, service_id, question, answer, proxy)
                     if submit:
-                        used_questions.add(question)
-                        success_count+=1
-
                         self.log(
                             f"{Fore.BLUE + Style.BRIGHT}    Status  : {Style.RESET_ALL}"
                             f"{Fore.GREEN + Style.BRIGHT}Receipt Submited Successfully{Style.RESET_ALL}"
                         )
+
+                        used_questions.add(question)
+                        success_count += 1
 
                 await self.print_timer()
 
