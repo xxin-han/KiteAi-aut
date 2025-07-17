@@ -1,26 +1,17 @@
 from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 from cryptography.hazmat.backends import default_backend
-from aiohttp import ClientResponseError, ClientSession, ClientTimeout
+from aiohttp import ClientResponseError, ClientSession, ClientTimeout, BasicAuth
 from aiohttp_socks import ProxyConnector
 from fake_useragent import FakeUserAgent
+from http.cookies import SimpleCookie
 from colorama import *
 from datetime import datetime
-import asyncio, binascii, random, json, os, pytz
+import asyncio, binascii, random, json, re, os, pytz
 
 wib = pytz.timezone('Asia/Jakarta')
 
 class KiteAi:
     def __init__(self) -> None:
-        self.headers = {
-            "Accept-Language": "application/json, text/plain, */*",
-            "Accept-Language": "id-ID,id;q=0.9,en-US;q=0.8,en;q=0.7",
-            "Origin": "https://testnet.gokite.ai",
-            "Referer": "https://testnet.gokite.ai/",
-            "Sec-Fetch-Dest": "empty",
-            "Sec-Fetch-Mode": "cors",
-            "Sec-Fetch-Site": "same-site",
-            "User-Agent": FakeUserAgent().random
-        }
         self.BASE_API = "https://testnet.gokite.ai"
         self.NEO_API = "https://neo.prod.gokite.ai/v2"
         self.OZONE_API = "https://ozone-point-system.prod.gokite.ai"
@@ -30,6 +21,7 @@ class KiteAi:
         self.BITTE_SUBNET = "0xca312b44a57cc9fd60f37e6c9a343a1ad92a3b6c"
         self.KITE_AI_SUBNET = "0xb132001567650917d6bd695d1fab55db7986e9a5"
         self.CAPTCHA_KEY = None
+        self.HEADERS = {}
         self.proxies = []
         self.proxy_index = 0
         self.account_proxies = {}
@@ -37,8 +29,6 @@ class KiteAi:
         self.access_tokens = {}
         self.header_cookies = {}
         self.agent_lists = []
-        self.min_delay = 0
-        self.max_delay = 0
 
     def clear_terminal(self):
         os.system('cls' if os.name == 'nt' else 'clear')
@@ -94,7 +84,7 @@ class KiteAi:
         try:
             if use_proxy_choice == 1:
                 async with ClientSession(timeout=ClientTimeout(total=30)) as session:
-                    async with session.get("https://api.proxyscrape.com/v4/free-proxy-list/get?request=display_proxies&proxy_format=protocolipport&format=text") as response:
+                    async with session.get("https://raw.githubusercontent.com/monosans/proxy-list/refs/heads/main/proxies/all.txt") as response:
                         response.raise_for_status()
                         content = await response.text()
                         with open(filename, 'w') as f:
@@ -126,22 +116,42 @@ class KiteAi:
             return proxies
         return f"http://{proxies}"
 
-    def get_next_proxy_for_account(self, token):
-        if token not in self.account_proxies:
+    def get_next_proxy_for_account(self, account):
+        if account not in self.account_proxies:
             if not self.proxies:
                 return None
             proxy = self.check_proxy_schemes(self.proxies[self.proxy_index])
-            self.account_proxies[token] = proxy
+            self.account_proxies[account] = proxy
             self.proxy_index = (self.proxy_index + 1) % len(self.proxies)
-        return self.account_proxies[token]
+        return self.account_proxies[account]
 
-    def rotate_proxy_for_account(self, token):
+    def rotate_proxy_for_account(self, account):
         if not self.proxies:
             return None
         proxy = self.check_proxy_schemes(self.proxies[self.proxy_index])
-        self.account_proxies[token] = proxy
+        self.account_proxies[account] = proxy
         self.proxy_index = (self.proxy_index + 1) % len(self.proxies)
         return proxy
+    
+    def build_proxy_config(self, proxy=None):
+        if not proxy:
+            return None, None, None
+
+        if proxy.startswith("socks"):
+            connector = ProxyConnector.from_url(proxy)
+            return connector, None, None
+
+        elif proxy.startswith("http"):
+            match = re.match(r"http://(.*?):(.*?)@(.*)", proxy)
+            if match:
+                username, password, host_port = match.groups()
+                clean_url = f"http://{host_port}"
+                auth = BasicAuth(username, password)
+                return None, clean_url, auth
+            else:
+                return None, proxy, None
+
+        raise Exception("Unsupported Proxy Type.")
 
     def generate_auth_token(self, address):
         try:
@@ -162,29 +172,6 @@ class KiteAi:
     def generate_quiz_title(self):
         today = datetime.today().strftime('%Y-%m-%d')
         return f"daily_quiz_{today}"
-    
-    def extract_cookies(self, raw_cookies: list):
-        cookies_dict = {}
-        try:
-            skip_keys = ['expires', 'path', 'domain', 'samesite', 'secure', 'httponly', 'max-age']
-
-            for cookie_str in raw_cookies:
-                cookie_parts = cookie_str.split(';')
-
-                for part in cookie_parts:
-                    cookie = part.strip()
-
-                    if '=' in cookie:
-                        name, value = cookie.split('=', 1)
-
-                        if name and value and name.lower() not in skip_keys:
-                            cookies_dict[name] = value
-
-            cookie_header = "; ".join([f"{key}={value}" for key, value in cookies_dict.items()])
-            
-            return cookie_header
-        except Exception as e:
-            raise Exception(f"Extract Cookies Data Failed: {str(e)}")
         
     def setup_ai_agent(self, agents: list):
         agent = random.choice(agents)
@@ -238,7 +225,7 @@ class KiteAi:
             return None
     
     async def print_timer(self):
-        for remaining in range(random.randint(self.min_delay, self.max_delay), 0, -1):
+        for remaining in range(random.randint(5, 10), 0, -1):
             print(
                 f"{Fore.CYAN + Style.BRIGHT}[ {datetime.now().astimezone(wib).strftime('%x %X %Z')} ]{Style.RESET_ALL}"
                 f"{Fore.WHITE + Style.BRIGHT} | {Style.RESET_ALL}"
@@ -290,33 +277,11 @@ class KiteAi:
                 else:
                     print(f"{Fore.RED + Style.BRIGHT}Invalid input. Enter 'y' or 'n'.{Style.RESET_ALL}")
 
-        while True:
-                try:
-                    min_delay = int(input(f"{Fore.YELLOW + Style.BRIGHT}Min Delay Each Interactions -> {Style.RESET_ALL}").strip())
-                    if min_delay >= 0:
-                        self.min_delay = min_delay
-                        break
-                    else:
-                        print(f"{Fore.RED + Style.BRIGHT}Min Delay must be >= 0.{Style.RESET_ALL}")
-                except ValueError:
-                    print(f"{Fore.RED + Style.BRIGHT}Invalid input. Enter a number.{Style.RESET_ALL}")
-
-        while True:
-            try:
-                max_delay = int(input(f"{Fore.YELLOW + Style.BRIGHT}Max Delay Each Interactions -> {Style.RESET_ALL}").strip())
-                if max_delay >= min_delay:
-                    self.max_delay = max_delay
-                    break
-                else:
-                    print(f"{Fore.RED + Style.BRIGHT}Min Delay must be >= Min Delay.{Style.RESET_ALL}")
-            except ValueError:
-                print(f"{Fore.RED + Style.BRIGHT}Invalid input. Enter a number.{Style.RESET_ALL}")
-
         return faucet, choose, rotate
     
-    async def solve_recaptcha(self, proxy=None, retries=5):
+    async def solve_recaptcha(self, proxy_url=None, retries=5):
         for attempt in range(retries):
-            connector = ProxyConnector.from_url(proxy) if proxy else None
+            connector, proxy, proxy_auth = self.build_proxy_config(proxy_url)
             try:
                 async with ClientSession(connector=connector, timeout=ClientTimeout(total=60)) as session:
                     
@@ -324,7 +289,7 @@ class KiteAi:
                         return None
 
                     url = f"http://2captcha.com/in.php?key={self.CAPTCHA_KEY}&method=userrecaptcha&googlekey={self.SITE_KEY}&pageurl={self.BASE_API}&json=1"
-                    async with session.get(url=url) as response:
+                    async with session.get(url=url, proxy=proxy, proxy_auth=proxy_auth) as response:
                         response.raise_for_status()
                         result = await response.json()
 
@@ -341,7 +306,7 @@ class KiteAi:
 
                         for _ in range(30):
                             res_url = f"http://2captcha.com/res.php?key={self.CAPTCHA_KEY}&action=get&id={request_id}&json=1"
-                            async with session.get(url=res_url) as res_response:
+                            async with session.get(url=res_url, proxy=proxy, proxy_auth=proxy_auth) as res_response:
                                 res_response.raise_for_status()
                                 res_result = await res_response.json()
 
@@ -352,7 +317,7 @@ class KiteAi:
                                     self.log(
                                         f"{Fore.MAGENTA + Style.BRIGHT}  ● {Style.RESET_ALL}"
                                         f"{Fore.BLUE + Style.BRIGHT}Message :{Style.RESET_ALL}"
-                                        f"{Fore.WHITE + Style.BRIGHT} Captcha Not Ready {Style.RESET_ALL}"
+                                        f"{Fore.YELLOW + Style.BRIGHT} Recaptcha Not Ready {Style.RESET_ALL}"
                                     )
                                     await asyncio.sleep(5)
                                     continue
@@ -364,31 +329,50 @@ class KiteAi:
                     await asyncio.sleep(5)
                     continue
                 return None
+            
+    async def check_connection(self, proxy_url=None):
+        connector, proxy, proxy_auth = self.build_proxy_config(proxy_url)
+        try:
+            async with ClientSession(connector=connector, timeout=ClientTimeout(total=30)) as session:
+                async with session.get(url="https://api.ipify.org?format=json", proxy=proxy, proxy_auth=proxy_auth) as response:
+                    response.raise_for_status()
+                    return True
+        except (Exception, ClientResponseError) as e:
+            self.log(
+                f"{Fore.CYAN+Style.BRIGHT}Status    :{Style.RESET_ALL}"
+                f"{Fore.RED+Style.BRIGHT} Connection Not 200 OK {Style.RESET_ALL}"
+                f"{Fore.MAGENTA+Style.BRIGHT}-{Style.RESET_ALL}"
+                f"{Fore.YELLOW+Style.BRIGHT} {str(e)} {Style.RESET_ALL}"
+            )
         
-    async def user_signin(self, address: str, proxy=None, retries=5):
+        return None
+        
+    async def user_signin(self, address: str, proxy_url=None, retries=5):
         url = f"{self.NEO_API}/signin"
         data = json.dumps({"eoa":address})
         headers = {
-            **self.headers,
+            **self.HEADERS[address],
             "Authorization": self.auth_tokens[address],
             "Content-Length": str(len(data)),
             "Content-Type": "application/json"
         }
         await asyncio.sleep(3)
         for attempt in range(retries):
-            connector = ProxyConnector.from_url(proxy) if proxy else None
+            connector, proxy, proxy_auth = self.build_proxy_config(proxy_url)
             try:
                 async with ClientSession(connector=connector, timeout=ClientTimeout(total=60)) as session:
-                    async with session.post(url=url, headers=headers, data=data) as response:
+                    async with session.post(url=url, headers=headers, data=data, proxy=proxy, proxy_auth=proxy_auth) as response:
                         response.raise_for_status()
                         result = await response.json()
 
                         raw_cookies = response.headers.getall('Set-Cookie', [])
                         if raw_cookies:
-                            cookie_header = self.extract_cookies(raw_cookies)
+                            cookie = SimpleCookie()
+                            cookie.load("\n".join(raw_cookies))
+                            cookie_string = "; ".join([f"{key}={morsel.value}" for key, morsel in cookie.items()])
+                            self.header_cookies[address] = cookie_string
 
-                            if cookie_header:
-                                return result, cookie_header
+                        return result
             except (Exception, ClientResponseError) as e:
                 if attempt < retries - 1:
                     await asyncio.sleep(5)
@@ -402,18 +386,18 @@ class KiteAi:
         
         return None, None
         
-    async def user_data(self, address: str, proxy=None, retries=5):
+    async def user_data(self, address: str, proxy_url=None, retries=5):
         url = f"{self.OZONE_API}/me"
         headers = {
-            **self.headers,
+            **self.HEADERS[address],
             "Authorization": f"Bearer {self.access_tokens[address]}"
         }
         await asyncio.sleep(3)
         for attempt in range(retries):
-            connector = ProxyConnector.from_url(proxy) if proxy else None
+            connector, proxy, proxy_auth = self.build_proxy_config(proxy_url)
             try:
                 async with ClientSession(connector=connector, timeout=ClientTimeout(total=60)) as session:
-                    async with session.get(url=url, headers=headers) as response:
+                    async with session.get(url=url, headers=headers, proxy=proxy, proxy_auth=proxy_auth) as response:
                         response.raise_for_status()
                         return await response.json()
             except (Exception, ClientResponseError) as e:
@@ -421,19 +405,19 @@ class KiteAi:
                     await asyncio.sleep(5)
                     continue
                 self.log(
-                    f"{Fore.CYAN+Style.BRIGHT}Error     :{Style.RESET_ALL}"
-                    f"{Fore.RED+Style.BRIGHT} GET User Data Failed {Style.RESET_ALL}"
+                    f"{Fore.CYAN+Style.BRIGHT}Status    :{Style.RESET_ALL}"
+                    f"{Fore.RED+Style.BRIGHT} Fetch User Data Failed {Style.RESET_ALL}"
                     f"{Fore.MAGENTA+Style.BRIGHT}-{Style.RESET_ALL}"
                     f"{Fore.YELLOW+Style.BRIGHT} {str(e)} {Style.RESET_ALL}"
                 )
 
         return None
         
-    async def create_quiz(self, address: str, proxy=None, retries=5):
+    async def create_quiz(self, address: str, proxy_url=None, retries=5):
         url = f"{self.NEO_API}/quiz/create"
         data = json.dumps({"title":self.generate_quiz_title(), "num":1, "eoa":address})
         headers = {
-            **self.headers,
+            **self.HEADERS[address],
             "Authorization": f"Bearer {self.access_tokens[address]}",
             "Cookie": self.header_cookies[address],
             "Content-Length": str(len(data)),
@@ -441,10 +425,10 @@ class KiteAi:
         }
         await asyncio.sleep(3)
         for attempt in range(retries):
-            connector = ProxyConnector.from_url(proxy) if proxy else None
+            connector, proxy, proxy_auth = self.build_proxy_config(proxy_url)
             try:
                 async with ClientSession(connector=connector, timeout=ClientTimeout(total=60)) as session:
-                    async with session.post(url=url, headers=headers, data=data) as response:
+                    async with session.post(url=url, headers=headers, data=data, proxy=proxy, proxy_auth=proxy_auth) as response:
                         response.raise_for_status()
                         return await response.json()
             except (Exception, ClientResponseError) as e:
@@ -460,19 +444,19 @@ class KiteAi:
 
         return None
         
-    async def get_quiz(self, address: str, quiz_id: int, proxy=None, retries=5):
+    async def get_quiz(self, address: str, quiz_id: int, proxy_url=None, retries=5):
         url = f"{self.NEO_API}/quiz/get?id={quiz_id}&eoa={address}"
         headers = {
-            **self.headers,
+            **self.HEADERS[address],
             "Authorization": f"Bearer {self.access_tokens[address]}",
             "Cookie": self.header_cookies[address]
         }
         await asyncio.sleep(3)
         for attempt in range(retries):
-            connector = ProxyConnector.from_url(proxy) if proxy else None
+            connector, proxy, proxy_auth = self.build_proxy_config(proxy_url)
             try:
                 async with ClientSession(connector=connector, timeout=ClientTimeout(total=60)) as session:
-                    async with session.get(url=url, headers=headers) as response:
+                    async with session.get(url=url, headers=headers, proxy=proxy, proxy_auth=proxy_auth) as response:
                         response.raise_for_status()
                         return await response.json()
             except (Exception, ClientResponseError) as e:
@@ -489,11 +473,11 @@ class KiteAi:
 
         return None
             
-    async def submit_quiz(self, address: str, quiz_id: int, question_id: int, quiz_answer: str, proxy=None, retries=5):
+    async def submit_quiz(self, address: str, quiz_id: int, question_id: int, quiz_answer: str, proxy_url=None, retries=5):
         url = f"{self.NEO_API}/quiz/submit"
         data = json.dumps({"quiz_id":quiz_id, "question_id":question_id, "answer":quiz_answer, "finish":True, "eoa":address})
         headers = {
-            **self.headers,
+            **self.HEADERS[address],
             "Authorization": f"Bearer {self.access_tokens[address]}",
             "Cookie": self.header_cookies[address],
             "Content-Length": str(len(data)),
@@ -501,10 +485,10 @@ class KiteAi:
         }
         await asyncio.sleep(3)
         for attempt in range(retries):
-            connector = ProxyConnector.from_url(proxy) if proxy else None
+            connector, proxy, proxy_auth = self.build_proxy_config(proxy_url)
             try:
                 async with ClientSession(connector=connector, timeout=ClientTimeout(total=60)) as session:
-                    async with session.post(url=url, headers=headers, data=data) as response:
+                    async with session.post(url=url, headers=headers, data=data, proxy=proxy, proxy_auth=proxy_auth) as response:
                         response.raise_for_status()
                         return await response.json()
             except (Exception, ClientResponseError) as e:
@@ -521,10 +505,10 @@ class KiteAi:
 
         return None
             
-    async def claim_faucet(self, address: str, recaptcha_token: str, proxy=None, retries=5):
+    async def claim_faucet(self, address: str, recaptcha_token: str, proxy_url=None, retries=5):
         url = f"{self.OZONE_API}/blockchain/faucet-transfer"
         headers = {
-            **self.headers,
+            **self.HEADERS[address],
             "Authorization": f"Bearer {self.access_tokens[address]}",
             "Content-Length":"2",
             "Content-Type": "application/json",
@@ -532,10 +516,10 @@ class KiteAi:
         }
         await asyncio.sleep(3)
         for attempt in range(retries):
-            connector = ProxyConnector.from_url(proxy) if proxy else None
+            connector, proxy, proxy_auth = self.build_proxy_config(proxy_url)
             try:
                 async with ClientSession(connector=connector, timeout=ClientTimeout(total=60)) as session:
-                    async with session.post(url=url, headers=headers, json={}) as response:
+                    async with session.post(url=url, headers=headers, json={}, proxy=proxy, proxy_auth=proxy_auth) as response:
                         response.raise_for_status()
                         return await response.json()
             except (Exception, ClientResponseError) as e:
@@ -552,18 +536,18 @@ class KiteAi:
 
         return None
             
-    async def token_balance(self, address: str, proxy=None, retries=5):
+    async def token_balance(self, address: str, proxy_url=None, retries=5):
         url = f"{self.OZONE_API}/me/balance"
         headers = {
-            **self.headers,
+            **self.HEADERS[address],
             "Authorization": f"Bearer {self.access_tokens[address]}"
         }
         await asyncio.sleep(3)
         for attempt in range(retries):
-            connector = ProxyConnector.from_url(proxy) if proxy else None
+            connector, proxy, proxy_auth = self.build_proxy_config(proxy_url)
             try:
                 async with ClientSession(connector=connector, timeout=ClientTimeout(total=60)) as session:
-                    async with session.get(url=url, headers=headers) as response:
+                    async with session.get(url=url, headers=headers, proxy=proxy, proxy_auth=proxy_auth) as response:
                         response.raise_for_status()
                         return await response.json()
             except (Exception, ClientResponseError) as e:
@@ -579,21 +563,21 @@ class KiteAi:
 
         return None
             
-    async def stake_token(self, address: str, amount: float, proxy=None, retries=5):
+    async def stake_token(self, address: str, amount: float, proxy_url=None, retries=5):
         url = f"{self.OZONE_API}/subnet/delegate"
         data = json.dumps({"subnet_address":self.KITE_AI_SUBNET, "amount":amount})
         headers = {
-            **self.headers,
+            **self.HEADERS[address],
             "Authorization": f"Bearer {self.access_tokens[address]}",
             "Content-Length": str(len(data)),
             "Content-Type": "application/json"
         }
         await asyncio.sleep(3)
         for attempt in range(retries):
-            connector = ProxyConnector.from_url(proxy) if proxy else None
+            connector, proxy, proxy_auth = self.build_proxy_config(proxy_url)
             try:
                 async with ClientSession(connector=connector, timeout=ClientTimeout(total=60)) as session:
-                    async with session.post(url=url, headers=headers, data=data) as response:
+                    async with session.post(url=url, headers=headers, data=data, proxy=proxy, proxy_auth=proxy_auth) as response:
                         response.raise_for_status()
                         return await response.json()
             except (Exception, ClientResponseError) as e:
@@ -609,21 +593,21 @@ class KiteAi:
 
         return None
             
-    async def claim_stake_rewards(self, address: str, proxy=None, retries=5):
+    async def claim_stake_rewards(self, address: str, proxy_url=None, retries=5):
         url = f"{self.OZONE_API}/subnet/claim-rewards"
         data = json.dumps({"subnet_address":self.KITE_AI_SUBNET})
         headers = {
-            **self.headers,
+            **self.HEADERS[address],
             "Authorization": f"Bearer {self.access_tokens[address]}",
             "Content-Length": str(len(data)),
             "Content-Type": "application/json"
         }
         await asyncio.sleep(3)
         for attempt in range(retries):
-            connector = ProxyConnector.from_url(proxy) if proxy else None
+            connector, proxy, proxy_auth = self.build_proxy_config(proxy_url)
             try:
                 async with ClientSession(connector=connector, timeout=ClientTimeout(total=60)) as session:
-                    async with session.post(url=url, headers=headers, data=data) as response:
+                    async with session.post(url=url, headers=headers, data=data, proxy=proxy, proxy_auth=proxy_auth) as response:
                         response.raise_for_status()
                         return await response.json()
             except (Exception, ClientResponseError) as e:
@@ -639,26 +623,21 @@ class KiteAi:
 
         return None
             
-    async def agent_inference(self, address: str, service_id: str, question: str, use_proxy: bool, rotate_proxy: bool, proxy=None, retries=5):
+    async def agent_inference(self, address: str, service_id: str, question: str, proxy_url=None, retries=5):
         url = f"{self.OZONE_API}/agent/inference"
         data = json.dumps(self.generate_inference_payload(service_id, question))
         headers = {
-            **self.headers,
+            **self.HEADERS[address],
             "Authorization": f"Bearer {self.access_tokens[address]}",
             "Content-Length": str(len(data)),
             "Content-Type": "application/json"
         }
         await asyncio.sleep(3)
         for attempt in range(retries):
-            connector = ProxyConnector.from_url(proxy) if proxy else None
+            connector, proxy, proxy_auth = self.build_proxy_config(proxy_url)
             try:
                 async with ClientSession(connector=connector, timeout=ClientTimeout(total=60)) as session:
-                    async with session.post(url=url, headers=headers, data=data) as response:
-                        if response.status == 401:
-                            await self.process_user_signin(address, use_proxy, rotate_proxy)
-                            headers["Authorization"] = f"Bearer {self.access_tokens[address]}"
-                            continue
-
+                    async with session.post(url=url, headers=headers, data=data, proxy=proxy, proxy_auth=proxy_auth) as response:
                         response.raise_for_status()
                         result = ""
 
@@ -689,11 +668,11 @@ class KiteAi:
 
         return None
             
-    async def submit_receipt(self, address: str, sa_address: str, service_id: str, question: str, answer: str, proxy=None, retries=5):
+    async def submit_receipt(self, address: str, sa_address: str, service_id: str, question: str, answer: str, proxy_url=None, retries=5):
         url = f"{self.NEO_API}/submit_receipt"
         data = json.dumps(self.generate_receipt_payload(sa_address, service_id, question, answer))
         headers = {
-            **self.headers,
+            **self.HEADERS[address],
             "Authorization": f"Bearer {self.access_tokens[address]}",
             "Cookie": self.header_cookies[address],
             "Content-Length": str(len(data)),
@@ -701,10 +680,10 @@ class KiteAi:
         }
         await asyncio.sleep(3)
         for attempt in range(retries):
-            connector = ProxyConnector.from_url(proxy) if proxy else None
+            connector, proxy, proxy_auth = self.build_proxy_config(proxy_url)
             try:
                 async with ClientSession(connector=connector, timeout=ClientTimeout(total=60)) as session:
-                    async with session.post(url=url, headers=headers, data=data) as response:
+                    async with session.post(url=url, headers=headers, data=data, proxy=proxy, proxy_auth=proxy_auth) as response:
                         response.raise_for_status()
                         return await response.json()
             except (Exception, ClientResponseError) as e:
@@ -721,7 +700,7 @@ class KiteAi:
 
         return None
             
-    async def process_user_signin(self, address: str, use_proxy: bool, rotate_proxy: bool):
+    async def process_check_connection(self, address: str, use_proxy: bool, rotate_proxy: bool):
         while True:
             proxy = self.get_next_proxy_for_account(address) if use_proxy else None
             self.log(
@@ -729,21 +708,29 @@ class KiteAi:
                 f"{Fore.WHITE+Style.BRIGHT} {proxy} {Style.RESET_ALL}"
             )
 
-            result, header_cookie = await self.user_signin(address, proxy)
-            if result and header_cookie:
-                self.access_tokens[address] = result["data"]["access_token"]
-                self.header_cookies[address] = header_cookie
+            is_valid = await self.check_connection(proxy)
+            if not is_valid:
+                if rotate_proxy:
+                    proxy = self.rotate_proxy_for_account(address)
+
+                continue
+
+            return True
+        
+    async def process_user_signin(self, address: str, use_proxy: bool, rotate_proxy: bool):
+        is_valid = await self.process_check_connection(address, use_proxy, rotate_proxy)
+        if is_valid:
+            proxy = self.get_next_proxy_for_account(address) if use_proxy else None
+
+            signin = await self.user_signin(address, proxy)
+            if signin:
+                self.access_tokens[address] = signin["data"]["access_token"]
 
                 self.log(
                     f"{Fore.CYAN+Style.BRIGHT}Status    :{Style.RESET_ALL}"
                     f"{Fore.GREEN+Style.BRIGHT} Login Success {Style.RESET_ALL}"
                 )
                 return True
-            
-            if rotate_proxy:
-                proxy = self.rotate_proxy_for_account(address)
-                await asyncio.sleep(5)
-                continue
 
             return False
         
@@ -773,7 +760,7 @@ class KiteAi:
 
             self.log(
                 f"{Fore.MAGENTA+Style.BRIGHT}  ● {Style.RESET_ALL}"
-                f"{Fore.WHITE+Style.BRIGHT} {balance} XP {Style.RESET_ALL}"
+                f"{Fore.WHITE+Style.BRIGHT}{balance} XP{Style.RESET_ALL}"
             )
 
             balance = await self.token_balance(address, proxy)
@@ -783,11 +770,11 @@ class KiteAi:
 
                 self.log(
                     f"{Fore.MAGENTA+Style.BRIGHT}  ● {Style.RESET_ALL}"
-                    f"{Fore.WHITE+Style.BRIGHT} {kite_balance} KITE {Style.RESET_ALL}"
+                    f"{Fore.WHITE+Style.BRIGHT}{kite_balance} KITE{Style.RESET_ALL}"
                 )
                 self.log(
                     f"{Fore.MAGENTA+Style.BRIGHT}  ● {Style.RESET_ALL}"
-                    f"{Fore.WHITE+Style.BRIGHT} {usdt_balance} USDT {Style.RESET_ALL}"
+                    f"{Fore.WHITE+Style.BRIGHT}{usdt_balance} USDT{Style.RESET_ALL}"
                 )
 
             if faucet:
@@ -798,7 +785,7 @@ class KiteAi:
 
                     self.log(
                         f"{Fore.MAGENTA + Style.BRIGHT}  ● {Style.RESET_ALL}"
-                        f"{Fore.YELLOW + Style.BRIGHT}Solving reCaptcha...{Style.RESET_ALL}"
+                        f"{Fore.YELLOW + Style.BRIGHT}Solving Recaptcha...{Style.RESET_ALL}"
                     )
 
                     recaptcha_token = await self.solve_recaptcha(proxy)
@@ -806,7 +793,7 @@ class KiteAi:
                         self.log(
                             f"{Fore.MAGENTA + Style.BRIGHT}  ● {Style.RESET_ALL}"
                             f"{Fore.BLUE + Style.BRIGHT}Message :{Style.RESET_ALL}"
-                            f"{Fore.GREEN + Style.BRIGHT} reCaptcha Solved Successfully {Style.RESET_ALL}"
+                            f"{Fore.GREEN + Style.BRIGHT} Recaptcha Solved Successfully {Style.RESET_ALL}"
                         )
 
                         claim = await self.claim_faucet(address, recaptcha_token, proxy)
@@ -821,7 +808,7 @@ class KiteAi:
                         self.log(
                             f"{Fore.MAGENTA + Style.BRIGHT}  ● {Style.RESET_ALL}"
                             f"{Fore.BLUE + Style.BRIGHT}Message :{Style.RESET_ALL}"
-                            f"{Fore.WHITE + Style.BRIGHT} reCaptcha Unsolved {Style.RESET_ALL}"
+                            f"{Fore.RED + Style.BRIGHT} Recaptcha Unsolved {Style.RESET_ALL}"
                         )
 
                 else:
@@ -934,15 +921,13 @@ class KiteAi:
 
             used_questions_per_agent = {}
 
-            success_count = 0
-
-            while success_count < 30:
+            for i in range(10):
                 self.log(
                     f"{Fore.MAGENTA + Style.BRIGHT}  ● {Style.RESET_ALL}"
                     f"{Fore.GREEN + Style.BRIGHT}Interactions{Style.RESET_ALL}"
-                    f"{Fore.WHITE + Style.BRIGHT} {success_count+1} {Style.RESET_ALL}"
+                    f"{Fore.WHITE + Style.BRIGHT} {i+1} {Style.RESET_ALL}"
                     f"{Fore.MAGENTA + Style.BRIGHT}Of{Style.RESET_ALL}"
-                    f"{Fore.WHITE + Style.BRIGHT} 30 {Style.RESET_ALL}                           "
+                    f"{Fore.WHITE + Style.BRIGHT} 10 {Style.RESET_ALL}                           "
                 )
 
                 agent = random.choice(self.agent_lists)
@@ -967,22 +952,23 @@ class KiteAi:
                     f"{Fore.WHITE + Style.BRIGHT}{question}{Style.RESET_ALL}"
                 )
 
-                answer = await self.agent_inference(address, service_id, question, use_proxy, rotate_proxy, proxy)
-                if answer:
+                answer = await self.agent_inference(address, service_id, question, proxy)
+                if not answer:
+                    break
+
+                self.log(
+                    f"{Fore.BLUE + Style.BRIGHT}    Answer  : {Style.RESET_ALL}"
+                    f"{Fore.WHITE + Style.BRIGHT}{answer.strip()}{Style.RESET_ALL}"
+                )
+
+                submit = await self.submit_receipt(address, sa_address, service_id, question, answer, proxy)
+                if submit:
                     self.log(
-                        f"{Fore.BLUE + Style.BRIGHT}    Answer  : {Style.RESET_ALL}"
-                        f"{Fore.WHITE + Style.BRIGHT}{answer.strip()}{Style.RESET_ALL}"
+                        f"{Fore.BLUE + Style.BRIGHT}    Status  : {Style.RESET_ALL}"
+                        f"{Fore.GREEN + Style.BRIGHT}Receipt Submited Successfully{Style.RESET_ALL}"
                     )
 
-                    submit = await self.submit_receipt(address, sa_address, service_id, question, answer, proxy)
-                    if submit:
-                        self.log(
-                            f"{Fore.BLUE + Style.BRIGHT}    Status  : {Style.RESET_ALL}"
-                            f"{Fore.GREEN + Style.BRIGHT}Receipt Submited Successfully{Style.RESET_ALL}"
-                        )
-
-                        used_questions.add(question)
-                        success_count += 1
+                used_questions.add(question)
 
                 await self.print_timer()
 
@@ -1042,6 +1028,17 @@ class KiteAi:
                                 f"{Fore.RED+Style.BRIGHT} Generate Auth Token Failed, Check Your Cryptography Library {Style.RESET_ALL}                  "
                             )
                             continue
+
+                        self.HEADERS[address] = {
+                            "Accept-Language": "application/json, text/plain, */*",
+                            "Accept-Language": "id-ID,id;q=0.9,en-US;q=0.8,en;q=0.7",
+                            "Origin": "https://testnet.gokite.ai",
+                            "Referer": "https://testnet.gokite.ai/",
+                            "Sec-Fetch-Dest": "empty",
+                            "Sec-Fetch-Mode": "cors",
+                            "Sec-Fetch-Site": "same-site",
+                            "User-Agent": FakeUserAgent().random
+                        }
                         
                         self.auth_tokens[address] = auth_token
                         
