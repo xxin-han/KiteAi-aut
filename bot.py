@@ -43,7 +43,7 @@ class KiteAi:
     def welcome(self):
         print(
             f"""
-        {Fore.GREEN + Style.BRIGHT}Auto BOT {Fore.BLUE + Style.BRIGHT}Kite Ai Ozone
+        {Fore.GREEN + Style.BRIGHT}Kite Ai Ozone {Fore.BLUE + Style.BRIGHT}Auto BOT
             """
             f"""
         {Fore.GREEN + Style.BRIGHT}Rey? {Fore.YELLOW + Style.BRIGHT}<INI WATERMARK>
