@@ -16,13 +16,16 @@ Kite AI Ozone BOT
   - Auto Claim KITE Token Faucet - `Need 2captcha key`
   - Auto Complete Daily Quiz
   - Auto Stake & Unstake KITE Token
-  - Auto Interaction With Kite AI Agents - 30x
+  - Auto Interaction With Kite AI Agents
+  - Auto Perform Random Bridge Tx
   - Multi Accounts
 
 ## Requiremnets
 
 - Make sure you have Python3.9 or higher installed and pip.
 - 2captcha key (optional)
+- Base Sepolia Faucet
+- KITE Faucet
 
 ## Instalation
 
@@ -39,7 +42,7 @@ Kite AI Ozone BOT
    pip install -r requirements.txt #or pip3 install -r requirements.txt
    ```
 
-### Note: If u got an error, check your cryptography and eth-account libraries version first. If not same with version in requirements.txt, u must uninstall that library.
+### Note: If u got an error, check your web3, eth-account and cryptography libraries version first. If not same with version in requirements.txt, u must uninstall that library.
 - **Check Library Version**
   ```bash
     pip show libary_name
@@ -57,8 +60,8 @@ Kite AI Ozone BOT
 
 - **accounts.txt:** You will find the file `accounts.txt` inside the project directory. Make sure `accounts.txt` contains data that matches the format expected by the script. Here are examples of file formats:
   ```bash
-    your_evm(EOA)_address_1
-    your_evm(EOA)_address_2
+    your_private_key_1
+    your_private_key_2
   ```
 
 - **2capctha_key.txt:** You will find the file `2capctha_key.txt` inside the project directory. Make sure `2capctha_key.txt` contains data that matches the format expected by the script. Here are examples of file formats:
