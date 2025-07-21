@@ -45,13 +45,16 @@ class KiteAi:
             {"type":"function","name":"approve","stateMutability":"nonpayable","inputs":[{"name":"spender","type":"address"},{"name":"amount","type":"uint256"}],"outputs":[{"name":"","type":"bool"}]},
             {"type":"function","name":"decimals","stateMutability":"view","inputs":[],"outputs":[{"name":"","type":"uint8"}]}
         ]''')
+        self.FAUCET_API = "https://faucet.gokite.ai"
         self.TESTNET_API = "https://testnet.gokite.ai"
         self.BRIDGE_API = "https://bridge-backend.prod.gokite.ai"
         self.NEO_API = "https://neo.prod.gokite.ai/v2"
         self.OZONE_API = "https://ozone-point-system.prod.gokite.ai"
-        self.SITE_KEY = "6Lc_VwgrAAAAALtx_UtYQnW-cFg8EPDgJ8QVqkaz"
+        self.FAUCET_SITE_KEY = "6LeNaK8qAAAAAHLuyTlCrZD_U1UoFLcCTLoa_69T"
+        self.TESTNET_SITE_KEY = "6Lc_VwgrAAAAALtx_UtYQnW-cFg8EPDgJ8QVqkaz"
         self.KITE_AI_SUBNET = "0xb132001567650917d6bd695d1fab55db7986e9a5"
         self.CAPTCHA_KEY = None
+        self.FAUCET_HEADERS = {}
         self.TESTNET_HEADERS = {}
         self.BRIDGE_HEADERS = {}
         self.proxies = []
@@ -618,7 +621,7 @@ class KiteAi:
 
         return option, choose, rotate
     
-    async def solve_recaptcha(self, retries=5):
+    async def solve_recaptcha(self, site_key: str, page_url: str, retries=5):
         for attempt in range(retries):
             try:
                 async with ClientSession(timeout=ClientTimeout(total=60)) as session:
@@ -631,7 +634,7 @@ class KiteAi:
                         )
                         return None
 
-                    url = f"http://2captcha.com/in.php?key={self.CAPTCHA_KEY}&method=userrecaptcha&googlekey={self.SITE_KEY}&pageurl={self.TESTNET_API}&json=1"
+                    url = f"http://2captcha.com/in.php?key={self.CAPTCHA_KEY}&method=userrecaptcha&googlekey={site_key}&pageurl={page_url}&json=1"
                     async with session.get(url=url) as response:
                         response.raise_for_status()
                         result = await response.json()
@@ -772,7 +775,7 @@ class KiteAi:
 
         return None
     
-    async def claim_faucet(self, address: str, recaptcha_token: str, use_proxy: bool, retries=5):
+    async def claim_testnet_faucet(self, address: str, recaptcha_token: str, use_proxy: bool, retries=5):
         url = f"{self.OZONE_API}/blockchain/faucet-transfer"
         headers = {
             **self.TESTNET_HEADERS[address],
@@ -788,6 +791,49 @@ class KiteAi:
             try:
                 async with ClientSession(connector=connector, timeout=ClientTimeout(total=60)) as session:
                     async with session.post(url=url, headers=headers, json={}, proxy=proxy, proxy_auth=proxy_auth, ssl=False) as response:
+                        response.raise_for_status()
+                        return await response.json()
+            except (Exception, ClientResponseError) as e:
+                if attempt < retries - 1:
+                    await asyncio.sleep(5)
+                    continue
+                self.log(
+                    f"{Fore.MAGENTA + Style.BRIGHT}  ● {Style.RESET_ALL}"
+                    f"{Fore.BLUE + Style.BRIGHT}Status  :{Style.RESET_ALL}"
+                    f"{Fore.RED+Style.BRIGHT} Not Claimed {Style.RESET_ALL}"
+                    f"{Fore.MAGENTA+Style.BRIGHT}-{Style.RESET_ALL}"
+                    f"{Fore.YELLOW+Style.BRIGHT} {str(e)} {Style.RESET_ALL}"
+                )
+
+        return None
+    
+    async def claim_bridge_faucet(self, address: str, recaptcha_token: str, use_proxy: bool, retries=5):
+        url = f"{self.FAUCET_API}/api/sendToken"
+        data = json.dumps({"address":address, "token":"", "v2Token":recaptcha_token, "chain":"KITE", "couponId":""})
+        headers = {
+            **self.FAUCET_HEADERS[address],
+            "Content-Length": str(len(data)),
+            "Content-Type": "application/json"
+        }
+        await asyncio.sleep(3)
+        for attempt in range(retries):
+            proxy_url = self.get_next_proxy_for_account(address) if use_proxy else None
+            connector, proxy, proxy_auth = self.build_proxy_config(proxy_url)
+            try:
+                async with ClientSession(connector=connector, timeout=ClientTimeout(total=60)) as session:
+                    async with session.post(url=url, headers=headers, data=data, proxy=proxy, proxy_auth=proxy_auth, ssl=False) as response:
+                        if response.status == 429:
+                            result = await response.json()
+                            err_msg = result.get("message", "Unknown Error")
+                            self.log(
+                                f"{Fore.MAGENTA + Style.BRIGHT}  ● {Style.RESET_ALL}"
+                                f"{Fore.BLUE + Style.BRIGHT}Status  :{Style.RESET_ALL}"
+                                f"{Fore.RED+Style.BRIGHT} Not Time to Claim {Style.RESET_ALL}"
+                                f"{Fore.MAGENTA+Style.BRIGHT}-{Style.RESET_ALL}"
+                                f"{Fore.YELLOW+Style.BRIGHT} {err_msg} {Style.RESET_ALL}"
+                            )
+                            return None
+
                         response.raise_for_status()
                         return await response.json()
             except (Exception, ClientResponseError) as e:
@@ -1132,16 +1178,20 @@ class KiteAi:
             )
 
     async def process_option_1(self, address: str, user: dict, use_proxy: bool):
+        self.log(f"{Fore.CYAN+Style.BRIGHT}Faucet    :{Style.RESET_ALL}")
+        self.log(
+            f"{Fore.BLUE + Style.BRIGHT}●{Style.RESET_ALL}"
+            f"{Fore.GREEN + Style.BRIGHT} Testnet Faucet {Style.RESET_ALL}"
+        )
+
         is_claimable = user.get("data", {}).get("faucet_claimable", False)
         if is_claimable:
-            self.log(f"{Fore.CYAN+Style.BRIGHT}Faucet    :{Style.RESET_ALL}")
-
             self.log(
                 f"{Fore.MAGENTA + Style.BRIGHT}  ● {Style.RESET_ALL}"
                 f"{Fore.YELLOW + Style.BRIGHT}Solving Recaptcha...{Style.RESET_ALL}"
             )
 
-            recaptcha_token = await self.solve_recaptcha()
+            recaptcha_token = await self.solve_recaptcha(self.TESTNET_SITE_KEY, self.TESTNET_API)
             if recaptcha_token:
                 self.log(
                     f"{Fore.MAGENTA + Style.BRIGHT}  ● {Style.RESET_ALL}"
@@ -1149,7 +1199,7 @@ class KiteAi:
                     f"{Fore.GREEN + Style.BRIGHT} Recaptcha Solved Successfully {Style.RESET_ALL}"
                 )
 
-                claim = await self.claim_faucet(address, recaptcha_token, use_proxy)
+                claim = await self.claim_testnet_faucet(address, recaptcha_token, use_proxy)
                 if claim:
                     self.log(
                         f"{Fore.MAGENTA + Style.BRIGHT}  ● {Style.RESET_ALL}"
@@ -1159,9 +1209,43 @@ class KiteAi:
 
         else:
             self.log(
-                f"{Fore.CYAN+Style.BRIGHT}Faucet    :{Style.RESET_ALL}"
-                f"{Fore.YELLOW+Style.BRIGHT} Not Time to Claim {Style.RESET_ALL}"
+                f"{Fore.MAGENTA + Style.BRIGHT}  ● {Style.RESET_ALL}"
+                f"{Fore.BLUE + Style.BRIGHT}Status  :{Style.RESET_ALL}"
+                f"{Fore.GREEN + Style.BRIGHT} Not Time to Claim {Style.RESET_ALL}"
             )
+
+        self.log(
+            f"{Fore.BLUE + Style.BRIGHT}●{Style.RESET_ALL}"
+            f"{Fore.GREEN + Style.BRIGHT} Bridge Faucet {Style.RESET_ALL}"
+        )
+
+        self.log(
+            f"{Fore.MAGENTA + Style.BRIGHT}  ● {Style.RESET_ALL}"
+            f"{Fore.YELLOW + Style.BRIGHT}Solving Recaptcha...{Style.RESET_ALL}"
+        )
+
+        recaptcha_token = await self.solve_recaptcha(self.FAUCET_SITE_KEY, self.FAUCET_API)
+        if recaptcha_token:
+            self.log(
+                f"{Fore.MAGENTA + Style.BRIGHT}  ● {Style.RESET_ALL}"
+                f"{Fore.BLUE + Style.BRIGHT}Message :{Style.RESET_ALL}"
+                f"{Fore.GREEN + Style.BRIGHT} Recaptcha Solved Successfully {Style.RESET_ALL}"
+            )
+
+            claim = await self.claim_bridge_faucet(address, recaptcha_token, use_proxy)
+            if claim:
+                tx_hash = claim.get("txHash")
+
+                self.log(
+                    f"{Fore.MAGENTA + Style.BRIGHT}  ● {Style.RESET_ALL}"
+                    f"{Fore.BLUE + Style.BRIGHT}Status  :{Style.RESET_ALL}"
+                    f"{Fore.GREEN + Style.BRIGHT} Claimed Successfully {Style.RESET_ALL}"
+                )
+                self.log(
+                    f"{Fore.MAGENTA + Style.BRIGHT}  ● {Style.RESET_ALL}"
+                    f"{Fore.BLUE + Style.BRIGHT}Explorer:{Style.RESET_ALL}"
+                    f"{Fore.GREEN + Style.BRIGHT} {self.KITE_AI['explorer']}{tx_hash} {Style.RESET_ALL}"
+                )
 
     async def process_option_2(self, address: str, use_proxy: bool):
         create = await self.create_quiz(address, use_proxy)
@@ -1525,6 +1609,17 @@ class KiteAi:
                             continue
 
                         user_agent = FakeUserAgent().random
+
+                        self.FAUCET_HEADERS[address] = {
+                            "Accept-Language": "application/json, text/plain, */*",
+                            "Accept-Language": "id-ID,id;q=0.9,en-US;q=0.8,en;q=0.7",
+                            "Origin": "https://faucet.gokite.ai",
+                            "Referer": "https://faucet.gokite.ai/",
+                            "Sec-Fetch-Dest": "empty",
+                            "Sec-Fetch-Mode": "cors",
+                            "Sec-Fetch-Site": "same-origin",
+                            "User-Agent": user_agent
+                        }
 
                         self.TESTNET_HEADERS[address] = {
                             "Accept-Language": "application/json, text/plain, */*",
