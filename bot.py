@@ -745,7 +745,7 @@ class KiteAi:
                     f"{Fore.YELLOW+Style.BRIGHT} {str(e)} {Style.RESET_ALL}"
                 )
         
-        return None, None
+        return None
     
     async def user_data(self, address: str, use_proxy: bool, retries=5):
         url = f"{self.OZONE_API}/me"
@@ -1211,7 +1211,7 @@ class KiteAi:
             self.log(
                 f"{Fore.MAGENTA + Style.BRIGHT}  ● {Style.RESET_ALL}"
                 f"{Fore.BLUE + Style.BRIGHT}Status  :{Style.RESET_ALL}"
-                f"{Fore.GREEN + Style.BRIGHT} Not Time to Claim {Style.RESET_ALL}"
+                f"{Fore.YELLOW + Style.BRIGHT} Not Time to Claim {Style.RESET_ALL}"
             )
 
         self.log(
@@ -1244,7 +1244,7 @@ class KiteAi:
                 self.log(
                     f"{Fore.MAGENTA + Style.BRIGHT}  ● {Style.RESET_ALL}"
                     f"{Fore.BLUE + Style.BRIGHT}Explorer:{Style.RESET_ALL}"
-                    f"{Fore.GREEN + Style.BRIGHT} {self.KITE_AI['explorer']}{tx_hash} {Style.RESET_ALL}"
+                    f"{Fore.WHITE + Style.BRIGHT} {self.KITE_AI['explorer']}{tx_hash} {Style.RESET_ALL}"
                 )
 
     async def process_option_2(self, address: str, use_proxy: bool):
