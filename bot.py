@@ -438,8 +438,8 @@ class KiteAi:
             )
             return None, None, None
         
-    async def print_timer(self, type: str):
-        for remaining in range(random.randint(5, 10), 0, -1):
+    async def print_timer(self, min: int, max: int, type: str):
+        for remaining in range(random.randint(min, max), 0, -1):
             print(
                 f"{Fore.CYAN + Style.BRIGHT}[ {datetime.now().astimezone(wib).strftime('%x %X %Z')} ]{Style.RESET_ALL}"
                 f"{Fore.WHITE + Style.BRIGHT} | {Style.RESET_ALL}"
@@ -1396,7 +1396,7 @@ class KiteAi:
                 )
 
             used_questions.add(question)
-            await self.print_timer("Interaction")
+            await self.print_timer(20, 30, "Interaction")
 
     async def process_option_6(self, account: str, address: str, use_proxy: bool):
         self.log(f"{Fore.CYAN+Style.BRIGHT}Bridge    :{Style.RESET_ALL}                       ")
@@ -1445,7 +1445,7 @@ class KiteAi:
                 continue
 
             await self.process_perform_bridge(account, address, rpc_url, src_chain_id, dest_chain_id, src_address, dest_address, amount, token_type, explorer, use_proxy)
-            await self.print_timer("Tx")
+            await self.print_timer(10, 15, "Tx")
 
     async def process_check_connection(self, address: str, use_proxy: bool, rotate_proxy: bool):
         while True:
