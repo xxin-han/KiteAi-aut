@@ -1877,8 +1877,10 @@ class KiteAi:
             if not is_valid:
                 if rotate_proxy:
                     proxy = self.rotate_proxy_for_account(address)
+                    await asyncio.sleep(1)
+                    continue
 
-                continue
+                return False
 
             return True
         
@@ -1903,8 +1905,7 @@ class KiteAi:
         if signed:
 
             user = await self.user_data(address, use_proxy)
-            if not user:
-                return
+            if not user: return
             
             username = user.get("data", {}).get("profile", {}).get("username", "Unknown")
             sa_address = user.get("data", {}).get("profile", {}).get("smart_account_address", "Undifined")
