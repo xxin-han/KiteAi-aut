@@ -4,7 +4,7 @@ Kite AI Ozone BOT
 - Register Here : [Kite AI Ozone](https://testnet.gokite.ai?referralCode=8SOHH7LG)
 - Sign With New EVM Wallet
 - Connect Social Media
-- Complete Available Tasks
+- Complete Onboarding Tasks
 
 ## Features
 
@@ -18,6 +18,7 @@ Kite AI Ozone BOT
   - Auto Stake & Unstake KITE Token
   - Auto Interaction With Kite AI Agents
   - Auto Perform Random Bridge Tx
+  - Auto Perform Random Swap Tx
   - Multi Accounts
 
 ## Requiremnets

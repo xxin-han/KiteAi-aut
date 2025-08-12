@@ -15,8 +15,12 @@ wib = pytz.timezone('Asia/Jakarta')
 
 class KiteAi:
     def __init__(self) -> None:
+        self.ZERO_CONTRACT_ADDRESS = "0x0000000000000000000000000000000000000000"
+        self.USDT_CONTRACT_ADDRESS = "0x0fF5393387ad2f9f691FD6Fd28e07E3969e27e63"
+        self.WKITE_CONTRACT_ADDRESS = "0x3bC8f037691Ce1d28c0bB224BD33563b49F99dE8"
         self.BRIDGE_ROUTER_ADDRESS = "0xD1bd49F60A6257dC96B3A040e6a1E17296A51375"
         self.SWAP_ROUTER_ADDRESS = "0x04CfcA82fDf5F4210BC90f06C44EF25Bf743D556"
+        self.DEST_BLOCKCHAIN_ID = "0x6715950e0aad8a92efaade30bd427599e88c459c2d8e29ec350fc4bfb371a114"
         self.KITE_AI = {
             "name": "KITE AI",
             "rpc_url": "https://rpc-testnet.gokite.ai/",
@@ -24,7 +28,7 @@ class KiteAi:
             "tokens": [
                 { "type": "native", "ticker": "KITE", "address": "0x0BBB7293c08dE4e62137a557BC40bc12FA1897d6" },
                 { "type": "erc20", "ticker": "ETH", "address": "0x7AEFdb35EEaAD1A15E869a6Ce0409F26BFd31239" },
-                { "type": "erc20", "ticker": "USDT", "address": "0x0fF5393387ad2f9f691FD6Fd28e07E3969e27e63" }
+                { "type": "erc20", "ticker": "USDT", "address": self.USDT_CONTRACT_ADDRESS }
             ],
             "chain_id": 2368
         }
@@ -40,55 +44,46 @@ class KiteAi:
             "chain_id": 84532
         }
         self.NATIVE_CONTRACT_ABI = json.loads('''[
-            {"type":"function","name":"send","stateMutability":"payable","inputs":[{"name":"_destChainId","type":"uint256"},{"name":"_recipient","type":"address"},{"name":"_amount","type":"uint256"}],"outputs":[]}
-        ]''')
-        self.ERC20_CONTRACT_ABI = json.loads('''[
-            {"type":"function","name":"send","stateMutability":"nonpayable","inputs":[{"name":"_destChainId","type":"uint256"},{"name":"_recipient","type":"address"},{"name":"_amount","type":"uint256"}],"outputs":[]},
-            {"type":"function","name":"balanceOf","stateMutability":"view","inputs":[{"name":"address","type":"address"}],"outputs":[{"name":"","type":"uint256"}]},
-            {"type":"function","name":"allowance","stateMutability":"view","inputs":[{"name":"owner","type":"address"},{"name":"spender","type":"address"}],"outputs":[{"name":"","type":"uint256"}]},
-            {"type":"function","name":"approve","stateMutability":"nonpayable","inputs":[{"name":"spender","type":"address"},{"name":"amount","type":"uint256"}],"outputs":[{"name":"","type":"bool"}]},
-            {"type":"function","name":"decimals","stateMutability":"view","inputs":[],"outputs":[{"name":"","type":"uint8"}]}
-        ]''')
-        self.SWAP_ROUTER_ADDRESS = [
+            {"type":"function","name":"send","stateMutability":"payable","inputs":[{"name":"_destChainId","type":"uint256"},{"name":"_recipient","type":"address"},{"name":"_amount","type":"uint256"}],"outputs":[]},
             {
-                "type": "function",
-                "name": "initiate",
-                "stateMutability": "payable",
-                "inputs": [
-                    { "name": "token", "type": "address", "internalType": "address"}, 
-                    { "name": "amount", "type": "uint256", "internalType": "uint256"}, 
+                "type":"function",
+                "name":"initiate",
+                "stateMutability":"payable",
+                "inputs":[
+                    {"name":"token","type":"address","internalType":"address"}, 
+                    {"name":"amount","type":"uint256","internalType":"uint256"}, 
                     { 
-                        "name": "instructions", 
-                        "type": "tuple", 
-                        "internalType": "struct Instructions",
-                        "components": [
-                            { "name": "sourceId", "type": "uint256", "internalType": "uint256" }, 
-                            { "name": "receiver", "type": "address", "internalType": "address" }, 
-                            { "name": "payableReceiver", "type": "bool", "internalType": "bool" }, 
-                            { "name": "rollbackReceiver", "type": "address", "internalType": "address" }, 
-                            { "name": "rollbackTeleporterFee", "type": "uint256", "internalType": "uint256" }, 
-                            { "name": "rollbackGasLimit", "type": "uint256", "internalType": "uint256" }, 
+                        "name":"instructions", 
+                        "type":"tuple", 
+                        "internalType":"struct Instructions",
+                        "components":[
+                            {"name":"sourceId","type":"uint256","internalType":"uint256"}, 
+                            {"name":"receiver","type":"address","internalType":"address"}, 
+                            {"name":"payableReceiver","type":"bool","internalType":"bool"}, 
+                            {"name":"rollbackReceiver","type":"address","internalType":"address"}, 
+                            {"name":"rollbackTeleporterFee","type":"uint256","internalType":"uint256"}, 
+                            {"name":"rollbackGasLimit","type":"uint256","internalType":"uint256"}, 
                             {
-                                "name": "hops",
-                                "type": "tuple[]",
-                                "internalType": "struct Hop[]",
-                                "components": [
-                                    { "name": "action", "type": "uint8", "internalType": "enum Action" }, 
-                                    { "name": "requiredGasLimit", "type": "uint256", "internalType": "uint256" }, 
-                                    { "name": "recipientGasLimit", "type": "uint256", "internalType": "uint256" }, 
-                                    { "name": "trade", "type": "bytes", "internalType": "bytes" }, 
+                                "name":"hops",
+                                "type":"tuple[]",
+                                "internalType":"struct Hop[]",
+                                "components":[
+                                    {"name":"action","type":"uint8","internalType":"enum Action"}, 
+                                    {"name":"requiredGasLimit","type":"uint256","internalType":"uint256"}, 
+                                    {"name":"recipientGasLimit","type":"uint256","internalType":"uint256"}, 
+                                    {"name":"trade","type":"bytes","internalType":"bytes"}, 
                                     {
-                                        "name": "bridgePath",
-                                        "type": "tuple",
-                                        "internalType": "struct BridgePath",
-                                        "components": [
-                                            { "name": "bridgeSourceChain", "type": "address", "internalType": "address" },
-                                            { "name": "sourceBridgeIsNative", "type": "bool", "internalType": "bool" },
-                                            { "name": "bridgeDestinationChain", "type": "address", "internalType": "address" },
-                                            { "name": "cellDestinationChain", "type": "address", "internalType": "address" },
-                                            { "name": "destinationBlockchainID", "type": "bytes32", "internalType": "bytes32" },
-                                            { "name": "teleporterFee", "type": "uint256", "internalType": "uint256" },
-                                            { "name": "secondaryTeleporterFee", "type": "uint256", "internalType": "uint256" }
+                                        "name":"bridgePath",
+                                        "type":"tuple",
+                                        "internalType":"struct BridgePath",
+                                        "components":[
+                                            {"name":"bridgeSourceChain","type":"address","internalType":"address"},
+                                            {"name":"sourceBridgeIsNative","type":"bool","internalType":"bool"},
+                                            {"name":"bridgeDestinationChain","type":"address","internalType":"address"},
+                                            {"name":"cellDestinationChain","type":"address","internalType":"address"},
+                                            {"name":"destinationBlockchainID","type":"bytes32","internalType":"bytes32"},
+                                            {"name":"teleporterFee","type":"uint256","internalType":"uint256"},
+                                            {"name":"secondaryTeleporterFee","type":"uint256","internalType":"uint256"}
                                         ]
                                     }
                                 ]
@@ -96,9 +91,64 @@ class KiteAi:
                         ]
                     }
                 ],
-                "outputs": []
+                "outputs":[]
             }
-        ]
+        ]''')
+        self.ERC20_CONTRACT_ABI = json.loads('''[
+            {"type":"function","name":"balanceOf","stateMutability":"view","inputs":[{"name":"address","type":"address"}],"outputs":[{"name":"","type":"uint256"}]},
+            {"type":"function","name":"allowance","stateMutability":"view","inputs":[{"name":"owner","type":"address"},{"name":"spender","type":"address"}],"outputs":[{"name":"","type":"uint256"}]},
+            {"type":"function","name":"approve","stateMutability":"nonpayable","inputs":[{"name":"spender","type":"address"},{"name":"amount","type":"uint256"}],"outputs":[{"name":"","type":"bool"}]},
+            {"type":"function","name":"decimals","stateMutability":"view","inputs":[],"outputs":[{"name":"","type":"uint8"}]},
+            {"type":"function","name":"send","stateMutability":"nonpayable","inputs":[{"name":"_destChainId","type":"uint256"},{"name":"_recipient","type":"address"},{"name":"_amount","type":"uint256"}],"outputs":[]},
+            {
+                "type":"function",
+                "name":"initiate",
+                "stateMutability":"nonpayable",
+                "inputs":[
+                    {"name":"token","type":"address","internalType":"address"}, 
+                    {"name":"amount","type":"uint256","internalType":"uint256"}, 
+                    { 
+                        "name":"instructions", 
+                        "type":"tuple", 
+                        "internalType":"struct Instructions",
+                        "components":[
+                            {"name":"sourceId","type":"uint256","internalType":"uint256"}, 
+                            {"name":"receiver","type":"address","internalType":"address"}, 
+                            {"name":"payableReceiver","type":"bool","internalType":"bool"}, 
+                            {"name":"rollbackReceiver","type":"address","internalType":"address"}, 
+                            {"name":"rollbackTeleporterFee","type":"uint256","internalType":"uint256"}, 
+                            {"name":"rollbackGasLimit","type":"uint256","internalType":"uint256"}, 
+                            {
+                                "name":"hops",
+                                "type":"tuple[]",
+                                "internalType":"struct Hop[]",
+                                "components":[
+                                    {"name":"action","type":"uint8","internalType":"enum Action"}, 
+                                    {"name":"requiredGasLimit","type":"uint256","internalType":"uint256"}, 
+                                    {"name":"recipientGasLimit","type":"uint256","internalType":"uint256"}, 
+                                    {"name":"trade","type":"bytes","internalType":"bytes"}, 
+                                    {
+                                        "name":"bridgePath",
+                                        "type":"tuple",
+                                        "internalType":"struct BridgePath",
+                                        "components":[
+                                            {"name":"bridgeSourceChain","type":"address","internalType":"address"},
+                                            {"name":"sourceBridgeIsNative","type":"bool","internalType":"bool"},
+                                            {"name":"bridgeDestinationChain","type":"address","internalType":"address"},
+                                            {"name":"cellDestinationChain","type":"address","internalType":"address"},
+                                            {"name":"destinationBlockchainID","type":"bytes32","internalType":"bytes32"},
+                                            {"name":"teleporterFee","type":"uint256","internalType":"uint256"},
+                                            {"name":"secondaryTeleporterFee","type":"uint256","internalType":"uint256"}
+                                        ]
+                                    }
+                                ]
+                            }
+                        ]
+                    }
+                ],
+                "outputs":[]
+            }
+        ]''')
         self.FAUCET_API = "https://faucet.gokite.ai"
         self.TESTNET_API = "https://testnet.gokite.ai"
         self.BRIDGE_API = "https://bridge-backend.prod.gokite.ai"
@@ -123,11 +173,15 @@ class KiteAi:
         self.auto_unstake = False
         self.auto_chat = False
         self.auto_bridge = False
+        self.auto_swap = False
         self.chat_count = 0
         self.bridge_count = 0
         self.kite_bridge_amount = 0
         self.eth_bridge_amount = 0
         self.usdt_bridge_amount = 0
+        self.swap_count = 0
+        self.kite_swap_amount = 0
+        self.usdt_swap_amount = 0
 
     def clear_terminal(self):
         os.system('cls' if os.name == 'nt' else 'clear')
@@ -357,7 +411,7 @@ class KiteAi:
     def generate_bridge_option(self):
         src_chain, dest_chain = random.choice([
             (self.KITE_AI, self.BASE_SEPOLIA),
-            # (self.BASE_SEPOLIA, self.KITE_AI)
+            (self.BASE_SEPOLIA, self.KITE_AI)
         ])
 
         src_token = random.choice(src_chain["tokens"])
@@ -383,6 +437,16 @@ class KiteAi:
             "dest_token": dest_token,
             "amount": amount
         }
+    
+    def generate_swap_option(self):
+        options = [
+            ("native to erc20", "KITE to USDT", self.WKITE_CONTRACT_ADDRESS, self.USDT_CONTRACT_ADDRESS, "KITE", "native", self.kite_swap_amount),
+            ("erc20 to native", "USDT to KITE", self.USDT_CONTRACT_ADDRESS, self.WKITE_CONTRACT_ADDRESS, "USDT", "erc20", self.usdt_swap_amount)
+        ]
+
+        swap_type, option, token_in, token_out, ticker, token_type, amount = random.choice(options)
+
+        return swap_type, option, token_in, token_out, ticker, token_type, amount
     
     async def get_web3_with_check(self, address: str, rpc_url: str, use_proxy: bool, retries=3, timeout=60):
         request_kwargs = {"timeout": timeout}
@@ -563,6 +627,108 @@ class KiteAi:
             )
             return None, None, None
         
+    def build_instructions_data(self, address: str, swap_type: str, token_in: str, token_out: str):
+        payable_receiver = False if swap_type == "native to erc20" else True
+        trade_hex = (
+            "0x"
+            "0000000000000000000000000000000000000000000000000000000000000020"
+            "0000000000000000000000000000000000000000000000000000000000000060"
+            "0000000000000000000000000000000000000000000000000000000000000000"
+            "0000000000000000000000000000000000000000000000000000000000000000"
+            "0000000000000000000000000000000000000000000000000000000000000002"
+            f"000000000000000000000000{token_in[2:].lower()}"
+            f"000000000000000000000000{token_out[2:].lower()}"
+        )
+
+        instructions = (
+            1,
+            address,
+            payable_receiver,
+            address,
+            0,
+            500000,
+            [
+                (
+                    3,
+                    2620000,
+                    2120000,
+                    trade_hex,
+                    (
+                        self.ZERO_CONTRACT_ADDRESS,
+                        False,
+                        self.ZERO_CONTRACT_ADDRESS,
+                        self.SWAP_ROUTER_ADDRESS,
+                        self.DEST_BLOCKCHAIN_ID,
+                        0,
+                        0
+                    )
+                )
+            ]
+        )
+
+        return instructions
+
+    async def perform_swap(self, account: str, address: str, swap_type: str, token_in: str, token_out: str, amount: float, use_proxy: bool):
+        try:
+            web3 = await self.get_web3_with_check(address, self.KITE_AI["rpc_url"], use_proxy)
+
+            amount_to_wei = web3.to_wei(amount, "ether")
+
+            if swap_type == "native to erc20":
+                token_contract = web3.eth.contract(address=web3.to_checksum_address(self.SWAP_ROUTER_ADDRESS), abi=self.NATIVE_CONTRACT_ABI)
+
+            elif swap_type == "erc20 to native":
+                await self.approving_token(
+                    account, address, self.KITE_AI["rpc_url"], self.SWAP_ROUTER_ADDRESS, token_in, amount_to_wei, self.KITE_AI["explorer"], use_proxy
+                )
+                token_contract = web3.eth.contract(address=web3.to_checksum_address(self.SWAP_ROUTER_ADDRESS), abi=self.ERC20_CONTRACT_ABI)
+
+            instructions = self.build_instructions_data(address, swap_type, token_in, token_out)
+
+            token_address = self.ZERO_CONTRACT_ADDRESS if swap_type == "native to erc20" else token_in
+
+            swap_data = token_contract.functions.initiate(token_address, amount_to_wei, instructions)
+
+            max_priority_fee = web3.to_wei(0.001, "gwei")
+            max_fee = max_priority_fee
+
+            if swap_type == "native to erc20":
+                estimated_gas = swap_data.estimate_gas({"from": address, "value": amount_to_wei})
+                swap_tx = swap_data.build_transaction({
+                    "from": address,
+                    "value": amount_to_wei,
+                    "gas": int(estimated_gas * 1.2),
+                    "maxFeePerGas": int(max_fee),
+                    "maxPriorityFeePerGas": int(max_priority_fee),
+                    "nonce": web3.eth.get_transaction_count(address, "pending"),
+                    "chainId": web3.eth.chain_id,
+                })
+
+            elif swap_type == "erc20 to native":
+                estimated_gas = swap_data.estimate_gas({"from": address})
+                swap_tx = swap_data.build_transaction({
+                    "from": address,
+                    "gas": int(estimated_gas * 1.2),
+                    "maxFeePerGas": int(max_fee),
+                    "maxPriorityFeePerGas": int(max_priority_fee),
+                    "nonce": web3.eth.get_transaction_count(address, "pending"),
+                    "chainId": web3.eth.chain_id,
+                })
+
+            tx_hash = await self.send_raw_transaction_with_retries(account, web3, swap_tx)
+            receipt = await self.wait_for_receipt_with_retries(web3, tx_hash)
+
+            block_number = receipt.blockNumber
+
+            return tx_hash, block_number
+
+        except Exception as e:
+            self.log(
+                f"{Fore.CYAN+Style.BRIGHT}     Message :{Style.RESET_ALL}"
+                f"{Fore.RED+Style.BRIGHT} {str(e)} {Style.RESET_ALL}"
+            )
+            return None, None
+        
     async def print_timer(self, min: int, max: int, type: str):
         for remaining in range(random.randint(min, max), 0, -1):
             print(
@@ -632,6 +798,40 @@ class KiteAi:
                     print(f"{Fore.RED + Style.BRIGHT}USDT Amount must be greater than 0.{Style.RESET_ALL}")
             except ValueError:
                 print(f"{Fore.RED + Style.BRIGHT}Invalid input. Enter a number.{Style.RESET_ALL}")
+
+    def print_swap_question(self):
+        while True:
+            try:
+                swap_count = int(input(f"{Fore.YELLOW + Style.BRIGHT}Swap Transaction Count? -> {Style.RESET_ALL}").strip())
+                if swap_count > 0:
+                    self.swap_count = swap_count
+                    break
+                else:
+                    print(f"{Fore.RED + Style.BRIGHT}Please enter positive number.{Style.RESET_ALL}")
+            except ValueError:
+                print(f"{Fore.RED + Style.BRIGHT}Invalid input. Enter a number.{Style.RESET_ALL}")
+
+        while True:
+            try:
+                kite_swap_amount = float(input(f"{Fore.YELLOW + Style.BRIGHT}Enter KITE Swap Amount? -> {Style.RESET_ALL}").strip())
+                if kite_swap_amount > 0:
+                    self.kite_swap_amount = kite_swap_amount
+                    break
+                else:
+                    print(f"{Fore.RED + Style.BRIGHT}KITE Amount must be greater than 0.{Style.RESET_ALL}")
+            except ValueError:
+                print(f"{Fore.RED + Style.BRIGHT}Invalid input. Enter a number.{Style.RESET_ALL}")
+
+        while True:
+            try:
+                usdt_swap_amount = float(input(f"{Fore.YELLOW + Style.BRIGHT}Enter USDT Swap Amount? -> {Style.RESET_ALL}").strip())
+                if usdt_swap_amount > 0:
+                    self.usdt_swap_amount = usdt_swap_amount
+                    break
+                else:
+                    print(f"{Fore.RED + Style.BRIGHT}USDT Amount must be greater than 0.{Style.RESET_ALL}")
+            except ValueError:
+                print(f"{Fore.RED + Style.BRIGHT}Invalid input. Enter a number.{Style.RESET_ALL}")
         
     def print_question(self):
         while True:
@@ -643,10 +843,11 @@ class KiteAi:
                 print(f"{Fore.WHITE + Style.BRIGHT}4. Unstake Token{Style.RESET_ALL}")
                 print(f"{Fore.WHITE + Style.BRIGHT}5. AI Agent Chat{Style.RESET_ALL}")
                 print(f"{Fore.WHITE + Style.BRIGHT}6. Random Bridge{Style.RESET_ALL}")
-                print(f"{Fore.WHITE + Style.BRIGHT}7. Run All Features{Style.RESET_ALL}")
-                option = int(input(f"{Fore.BLUE + Style.BRIGHT}Choose [1/2/3/4/5/6/7] -> {Style.RESET_ALL}").strip())
+                print(f"{Fore.WHITE + Style.BRIGHT}7. Random Swap{Style.RESET_ALL}")
+                print(f"{Fore.WHITE + Style.BRIGHT}8. Run All Features{Style.RESET_ALL}")
+                option = int(input(f"{Fore.BLUE + Style.BRIGHT}Choose [1/2/3/4/5/6/7/8] -> {Style.RESET_ALL}").strip())
 
-                if option in [1, 2, 3, 4, 5, 6, 7]:
+                if option in [1, 2, 3, 4, 5, 6, 7, 8]:
                     option_type = (
                         "Claim Faucet" if option == 1 else 
                         "Daily Quiz" if option == 2 else 
@@ -654,14 +855,15 @@ class KiteAi:
                         "Unstake Token" if option == 4 else 
                         "AI Agent Chat" if option == 5 else 
                         "Random Bridge" if option == 6 else 
+                        "Random Swap" if option == 7 else 
                         "Run All Features"
                     )
                     print(f"{Fore.GREEN + Style.BRIGHT}{option_type} Selected.{Style.RESET_ALL}")
                     break
                 else:
-                    print(f"{Fore.RED + Style.BRIGHT}Please enter either 1, 2, 3, 4, 5, 6, or 7.{Style.RESET_ALL}")
+                    print(f"{Fore.RED + Style.BRIGHT}Please enter either 1, 2, 3, 4, 5, 6, 7, or 8.{Style.RESET_ALL}")
             except ValueError:
-                print(f"{Fore.RED + Style.BRIGHT}Invalid input. Enter a number (1, 2, 3, 4, 5, 6, or 7).{Style.RESET_ALL}")
+                print(f"{Fore.RED + Style.BRIGHT}Invalid input. Enter a number (1, 2, 3, 4, 5, 6, 7, or 8).{Style.RESET_ALL}")
 
         if option == 5:
             self.print_chat_question()
@@ -670,6 +872,9 @@ class KiteAi:
             self.print_bridge_question()
 
         elif option == 7:
+            self.print_swap_question()
+
+        elif option == 8:
             while True:
                 auto_faucet = input(f"{Fore.YELLOW + Style.BRIGHT}Auto Claim Kite Token Faucet? [y/n] -> {Style.RESET_ALL}").strip()
                 if auto_faucet in ["y", "n"]:
@@ -720,6 +925,17 @@ class KiteAi:
                     
                     if self.auto_bridge:
                         self.print_bridge_question()
+                    break
+                else:
+                    print(f"{Fore.RED + Style.BRIGHT}Please enter 'y' or 'n'.{Style.RESET_ALL}")
+
+            while True:
+                auto_swap = input(f"{Fore.YELLOW + Style.BRIGHT}Auto Perform Random Swap? [y/n] -> {Style.RESET_ALL}").strip()
+                if auto_swap in ["y", "n"]:
+                    self.auto_swap = auto_swap == "y"
+                    
+                    if self.auto_swap:
+                        self.print_swap_question()()
                     break
                 else:
                     print(f"{Fore.RED + Style.BRIGHT}Please enter 'y' or 'n'.{Style.RESET_ALL}")
@@ -1312,6 +1528,31 @@ class KiteAi:
                 f"{Fore.CYAN+Style.BRIGHT}     Status  :{Style.RESET_ALL}"
                 f"{Fore.RED+Style.BRIGHT} Perform On-Chain Failed {Style.RESET_ALL}"
             )
+    
+    async def process_perform_swap(self, account: str, address: str, swap_type: str, token_in: str, token_out: str, amount: float, use_proxy: bool):
+        tx_hash, block_number = await self.perform_swap(account, address, swap_type, token_in, token_out, amount, use_proxy)
+        if tx_hash and block_number:
+            self.log(
+                f"{Fore.CYAN+Style.BRIGHT}     Status  :{Style.RESET_ALL}"
+                f"{Fore.GREEN+Style.BRIGHT} Success {Style.RESET_ALL}"
+            )
+            self.log(
+                f"{Fore.CYAN+Style.BRIGHT}     Block   :{Style.RESET_ALL}"
+                f"{Fore.WHITE+Style.BRIGHT} {block_number} {Style.RESET_ALL}"
+            )
+            self.log(
+                f"{Fore.CYAN+Style.BRIGHT}     Tx Hash :{Style.RESET_ALL}"
+                f"{Fore.WHITE+Style.BRIGHT} {tx_hash} {Style.RESET_ALL}"
+            )
+            self.log(
+                f"{Fore.CYAN+Style.BRIGHT}     Explorer:{Style.RESET_ALL}"
+                f"{Fore.WHITE+Style.BRIGHT} {self.KITE_AI['explorer']}{tx_hash} {Style.RESET_ALL}"
+            )
+        else:
+            self.log(
+                f"{Fore.CYAN+Style.BRIGHT}     Status  :{Style.RESET_ALL}"
+                f"{Fore.RED+Style.BRIGHT} Perform On-Chain Failed {Style.RESET_ALL}"
+            )
 
     async def process_option_1(self, address: str, user: dict, use_proxy: bool):
         self.log(f"{Fore.CYAN+Style.BRIGHT}Faucet    :{Style.RESET_ALL}")
@@ -1587,6 +1828,43 @@ class KiteAi:
             await self.process_perform_bridge(account, address, rpc_url, src_chain_id, dest_chain_id, src_address, dest_address, amount, token_type, explorer, use_proxy)
             await self.print_timer(5, 10, "Tx")
 
+    async def process_option_7(self, account: str, address: str, use_proxy: bool):
+        self.log(f"{Fore.CYAN+Style.BRIGHT}Swap      :{Style.RESET_ALL}                       ")
+
+        for i in range(self.swap_count):
+            self.log(
+                f"{Fore.MAGENTA+Style.BRIGHT}   ● {Style.RESET_ALL}"
+                f"{Fore.GREEN+Style.BRIGHT}Swap{Style.RESET_ALL}"
+                f"{Fore.WHITE+Style.BRIGHT} {i+1} / {self.swap_count} {Style.RESET_ALL}                           "
+            )
+
+            swap_type, option, token_in, token_out, ticker, token_type, amount = self.generate_swap_option()
+
+            balance = await self.get_token_balance(address, self.KITE_AI["rpc_url"], token_in, token_type, use_proxy)
+
+            self.log(
+                f"{Fore.CYAN+Style.BRIGHT}     Pair    :{Style.RESET_ALL}"
+                f"{Fore.BLUE+Style.BRIGHT} {option} {Style.RESET_ALL}"
+            )
+            self.log(
+                f"{Fore.CYAN+Style.BRIGHT}     Balance :{Style.RESET_ALL}"
+                f"{Fore.WHITE+Style.BRIGHT} {balance} {ticker} {Style.RESET_ALL}"
+            )
+            self.log(
+                f"{Fore.CYAN+Style.BRIGHT}     Amount  :{Style.RESET_ALL}"
+                f"{Fore.WHITE+Style.BRIGHT} {amount} {ticker} {Style.RESET_ALL}"
+            )
+
+            if not balance or balance <= amount:
+                self.log(
+                    f"{Fore.CYAN+Style.BRIGHT}     Status  :{Style.RESET_ALL}"
+                    f"{Fore.YELLOW+Style.BRIGHT} Insufficient {ticker} Token Balance {Style.RESET_ALL}"
+                )
+                continue
+
+            await self.process_perform_swap(account, address, swap_type, token_in, token_out, amount, use_proxy)
+            await self.print_timer(5, 10, "Tx")
+
     async def process_check_connection(self, address: str, use_proxy: bool, rotate_proxy: bool):
         while True:
             proxy = self.get_next_proxy_for_account(address) if use_proxy else None
@@ -1666,6 +1944,9 @@ class KiteAi:
             elif option == 6:
                 await self.process_option_6(account, address, use_proxy)
 
+            elif option == 7:
+                await self.process_option_7(account, address, use_proxy)
+
             else:
                 if self.auto_faucet:
                     await self.process_option_1(address, user, use_proxy)
@@ -1689,6 +1970,10 @@ class KiteAi:
 
                 if self.auto_bridge:
                     await self.process_option_6(account, address, use_proxy)
+                    await asyncio.sleep(5)
+
+                if self.auto_swap:
+                    await self.process_option_7(account, address, use_proxy)
 
     async def main(self):
         try:
