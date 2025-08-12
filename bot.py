@@ -935,7 +935,7 @@ class KiteAi:
                     self.auto_swap = auto_swap == "y"
                     
                     if self.auto_swap:
-                        self.print_swap_question()()
+                        self.print_swap_question()
                     break
                 else:
                     print(f"{Fore.RED + Style.BRIGHT}Please enter 'y' or 'n'.{Style.RESET_ALL}")
@@ -1045,7 +1045,7 @@ class KiteAi:
     async def check_connection(self, proxy_url=None):
         connector, proxy, proxy_auth = self.build_proxy_config(proxy_url)
         try:
-            async with ClientSession(connector=connector, timeout=ClientTimeout(total=5)) as session:
+            async with ClientSession(connector=connector, timeout=ClientTimeout(total=30)) as session:
                 async with session.get(url="https://api.ipify.org?format=json", proxy=proxy, proxy_auth=proxy_auth, ssl=False) as response:
                     response.raise_for_status()
                     return True
