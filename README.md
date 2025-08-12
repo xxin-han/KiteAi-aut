@@ -43,7 +43,7 @@ Kite AI Ozone BOT
    pip install -r requirements.txt #or pip3 install -r requirements.txt
    ```
 
-### Note: If u got an error, check your web3, eth-account and cryptography libraries version first. If not same with version in requirements.txt, u must uninstall that library.
+### Note: If u got an error, check your web3, eth-abi, eth-utils, eth-account and cryptography libraries version first. If not same with version in requirements.txt, u must uninstall that library.
 - **Check Library Version**
   ```bash
     pip show libary_name

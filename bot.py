@@ -1,6 +1,8 @@
 from web3 import Web3
 from web3.exceptions import TransactionNotFound
 from eth_account import Account
+from eth_abi.abi import encode
+from eth_utils import to_hex
 from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 from cryptography.hazmat.backends import default_backend
 from aiohttp import ClientResponseError, ClientSession, ClientTimeout, BasicAuth
@@ -628,45 +630,35 @@ class KiteAi:
             return None, None, None
         
     def build_instructions_data(self, address: str, swap_type: str, token_in: str, token_out: str):
-        payable_receiver = False if swap_type == "native to erc20" else True
-        trade_hex = (
-            "0x"
-            "0000000000000000000000000000000000000000000000000000000000000020"
-            "0000000000000000000000000000000000000000000000000000000000000060"
-            "0000000000000000000000000000000000000000000000000000000000000000"
-            "0000000000000000000000000000000000000000000000000000000000000000"
-            "0000000000000000000000000000000000000000000000000000000000000002"
-            f"000000000000000000000000{token_in[2:].lower()}"
-            f"000000000000000000000000{token_out[2:].lower()}"
-        )
-
-        instructions = (
-            1,
-            address,
-            payable_receiver,
-            address,
-            0,
-            500000,
-            [
-                (
-                    3,
-                    2620000,
-                    2120000,
-                    trade_hex,
-                    (
-                        self.ZERO_CONTRACT_ADDRESS,
-                        False,
-                        self.ZERO_CONTRACT_ADDRESS,
-                        self.SWAP_ROUTER_ADDRESS,
-                        self.DEST_BLOCKCHAIN_ID,
-                        0,
-                        0
-                    )
+        try:
+            payable_receiver = False if swap_type == "native to erc20" else True
+            trade_hex = to_hex(
+                encode(
+                    ['uint8', 'uint8', 'uint256', 'uint256', 'address', 'address', 'address'],
+                    [32, 96, 0, 0, '0x0000000000000000000000000000000000000002', token_in, token_out]
                 )
-            ]
-        )
+            )
 
-        return instructions
+            instructions = (
+                1, address, payable_receiver, address, 0, 500000, [
+                    (
+                        3, 2620000, 2120000, trade_hex, 
+                        (
+                            self.ZERO_CONTRACT_ADDRESS,
+                            False,
+                            self.ZERO_CONTRACT_ADDRESS,
+                            self.SWAP_ROUTER_ADDRESS,
+                            self.DEST_BLOCKCHAIN_ID,
+                            0,
+                            0
+                        )
+                    )
+                ]
+            )
+
+            return instructions
+        except Exception as e:
+            raise Exception(f"Built Instructions Data Failed: {str(e)}")
 
     async def perform_swap(self, account: str, address: str, swap_type: str, token_in: str, token_out: str, amount: float, use_proxy: bool):
         try:
