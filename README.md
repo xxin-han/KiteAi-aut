@@ -9,16 +9,19 @@ Kite AI Ozone BOT
 ## Features
 
   - Auto Get Account Information
-  - Auto Run With [Proxyscrape Free Proxy](https://proxyscrape.com/free-proxy-list) - `Choose 1`
-  - Auto Run With Private Proxy - `Choose 2`
-  - Auto Run Without Proxy - `Choose 3`
+  - Auto Run With Proxy - `Choose 1`
+  - Auto Run Without Proxy - `Choose 2`
   - Auto Rotate Invalid Proxies - `y` or `n`
-  - Auto Claim Faucet - `Need 2captcha key`
+  - Auto Claim Faucets `Need 2Captcha Key`
+  - Auto Deposit KITE Token
+  - Auto Withdraw Tokens
+  - Auto Unstake KITE Token
+  - Auto Stake KITE Token
+  - Auto Claim Stake Reward
   - Auto Complete Daily Quiz
-  - Auto Stake & Unstake KITE Token
-  - Auto Interaction With Kite AI Agents
-  - Auto Perform Random Bridge Tx
-  - Auto Perform Random Swap Tx
+  - Auto Interact With AI Agent
+  - Auto Make Random Swap
+  - Auto Make Random Bridge
   - Multi Accounts
 
 ## Requiremnets
