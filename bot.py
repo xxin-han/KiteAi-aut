@@ -1,3 +1,4 @@
+
 from web3 import Web3
 from web3.exceptions import TransactionNotFound
 from eth_account import Account
@@ -1120,60 +1121,53 @@ class KiteAI:
         for attempt in range(retries):
             try:
                 async with ClientSession(timeout=ClientTimeout(total=60)) as session:
-
-                    if self.API_KEY is None:
+                    
+                    if self.CAPTCHA_KEY is None:
                         self.log(
                             f"{Fore.BLUE + Style.BRIGHT}   Status  : {Style.RESET_ALL}"
-                            f"{Fore.YELLOW + Style.BRIGHT}AntiCaptcha Key Is None{Style.RESET_ALL}"
+                            f"{Fore.YELLOW + Style.BRIGHT}2Captcha Key Is None{Style.RESET_ALL}"
                         )
                         return None
 
-                    # Step 1: Create Task
-                    create_payload = {
-                        "clientKey": self.API_KEY,
-                        "task": {
-                            "type": "NoCaptchaTaskProxyless",
-                            "websiteURL": page_url,
-                            "websiteKey": site_key
-                        }
-                    }
-                    async with session.post("https://api.anti-captcha.com/createTask", json=create_payload) as response:
+                    url = f"http://2captcha.com/in.php?key={self.CAPTCHA_KEY}&method=userrecaptcha&googlekey={site_key}&pageurl={page_url}&json=1"
+                    async with session.get(url=url) as response:
                         response.raise_for_status()
                         result = await response.json()
 
-                        if result.get("errorId") != 0:
+                        if result.get("status") != 1:
+                            err_text = result.get("error_text", "Unknown Error")
+                            
                             self.log(
                                 f"{Fore.BLUE + Style.BRIGHT}   Message : {Style.RESET_ALL}"
-                                f"{Fore.YELLOW + Style.BRIGHT}{result.get('errorDescription', 'Unknown Error')}{Style.RESET_ALL}"
+                                f"{Fore.YELLOW + Style.BRIGHT}{err_text}{Style.RESET_ALL}"
                             )
                             await asyncio.sleep(5)
                             continue
 
-                        task_id = result.get("taskId")
+                        request_id = result.get("request")
                         self.log(
-                            f"{Fore.BLUE + Style.BRIGHT}   Task Id : {Style.RESET_ALL}"
-                            f"{Fore.WHITE + Style.BRIGHT}{task_id}{Style.RESET_ALL}"
+                            f"{Fore.BLUE + Style.BRIGHT}   Req Id  : {Style.RESET_ALL}"
+                            f"{Fore.WHITE + Style.BRIGHT}{request_id}{Style.RESET_ALL}"
                         )
 
-                    # Step 2: Polling Result
-                    for _ in range(30):
-                        await asyncio.sleep(5)
-                        get_payload = {"clientKey": self.API_KEY, "taskId": task_id}
-                        async with session.post("https://api.anti-captcha.com/getTaskResult", json=get_payload) as res_response:
-                            res_response.raise_for_status()
-                            res_result = await res_response.json()
+                        for _ in range(30):
+                            res_url = f"http://2captcha.com/res.php?key={self.CAPTCHA_KEY}&action=get&id={request_id}&json=1"
+                            async with session.get(url=res_url) as res_response:
+                                res_response.raise_for_status()
+                                res_result = await res_response.json()
 
-                            if res_result.get("status") == "ready":
-                                recaptcha_token = res_result["solution"]["gRecaptchaResponse"]
-                                return recaptcha_token
-                            elif res_result.get("status") == "processing":
-                                self.log(
-                                    f"{Fore.BLUE + Style.BRIGHT}   Message : {Style.RESET_ALL}"
-                                    f"{Fore.YELLOW + Style.BRIGHT}Recaptcha Not Ready{Style.RESET_ALL}"
-                                )
-                                continue
-                            else:
-                                break
+                                if res_result.get("status") == 1:
+                                    recaptcha_token = res_result.get("request")
+                                    return recaptcha_token
+                                elif res_result.get("request") == "CAPCHA_NOT_READY":
+                                    self.log(
+                                        f"{Fore.BLUE + Style.BRIGHT}   Message : {Style.RESET_ALL}"
+                                        f"{Fore.YELLOW + Style.BRIGHT}Recaptcha Not Ready{Style.RESET_ALL}"
+                                    )
+                                    await asyncio.sleep(5)
+                                    continue
+                                else:
+                                    break
 
             except (Exception, ClientResponseError) as e:
                 if attempt < retries - 1:
