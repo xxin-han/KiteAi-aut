@@ -24,11 +24,6 @@ Kite AI Ozone BOT
   - Auto Make Random Bridge
   - Multi Accounts
 
-If you need a reliable proxy for multi-wallet automation, airdrop farming, or avoiding geo-restrictions, I recommend **Nstproxy**.  
-Affordable (from $0.1/GB), global coverage, rotation control, and anti-ban tech.
-
-🔗 [Nstproxy.com](https://www.nstproxy.com/?utm_source=vonssy) | [Telegram](https://t.me/nstproxy) | [Discord](https://discord.gg/5jjWCAmvng) | [Github](https://github.com/Nstproxy)  
-👉 Use code **VONSSY** to get **10% OFF**
 
 ## Requiremnets
 
@@ -41,30 +36,21 @@ Affordable (from $0.1/GB), global coverage, rotation control, and anti-ban tech.
 
 1. **Clone The Repositories:**
    ```bash
-   git clone https://github.com/vonssy/KiteAi-BOT.git
+   git clone https://github.com/xxin-han/KiteAi-aut.git
    ```
    ```bash
-   cd KiteAi-BOT
+   cd KiteAi-aut
    ```
 
-2. **Install Requirements:**
+2. **Create environment**
    ```bash
-   pip install -r requirements.txt #or pip3 install -r requirements.txt
+    python3 -m venv .venv
+    source .venv/bin/activate
+   ```   
+4. **Install dependensi**
+   ```bash
+   pip install -r requirements.txt
    ```
-
-### Note: If u got an error, check your web3, eth-abi, eth-utils, eth-account and cryptography libraries version first. If not same with version in requirements.txt, u must uninstall that library.
-- **Check Library Version**
-  ```bash
-    pip show libary_name
-  ```
-- **Uninstall Library**
-  ```bash
-    pip uninstall libary_name
-  ```
-- **Install Library With Version**
-  ```bash
-    pip install libary_name==version
-  ```
 
 ## Configuration
 
